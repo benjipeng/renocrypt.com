@@ -36,6 +36,15 @@ const plus = [
   [36, 24],
   [24, 36],
 ];
+
+// Status ("breathe") variant: a radial ripple. The gold core pulses and a
+// wave of light radiates outward through the dots (inner ring first, then the
+// corners) and fades, on repeat. Each element's delay is set by its distance
+// from center, so the pulse travels outward from the core.
+const RIPPLE_SPREAD = 0.8;
+const MAXD = Math.hypot(12, 12);
+const rippleDelay = (x: number, y: number) =>
+  (-(1 - Math.hypot(x - 24, y - 24) / MAXD) * RIPPLE_SPREAD).toFixed(2);
 ---
 
 <svg
@@ -50,14 +59,14 @@ const plus = [
   {title && <title>{title}</title>}
 
   <g class="rm-orbit">
-    {corners.map(([x, y]) => <circle cx={x} cy={y} r="2" fill="currentColor" opacity="0.85" class="rm-dot-c" />)}
-    {plus.map(([x, y]) => <circle cx={x} cy={y} r="2.9" fill="currentColor" class="rm-dot-p" />)}
+    {corners.map(([x, y]) => <circle cx={x} cy={y} r="2" fill="currentColor" opacity="0.85" class="rm-dot-c" style={`--d:${rippleDelay(x, y)}s`} />)}
+    {plus.map(([x, y]) => <circle cx={x} cy={y} r="2.9" fill="currentColor" class="rm-dot-p" style={`--d:${rippleDelay(x, y)}s`} />)}
   </g>
 
   {animated && plus.map(([x, y]) => <circle cx={x} cy={y} r="3.2" fill="none" stroke="var(--accent)" stroke-width="1.6" class="rm-ring-p" />)}
   {animated && corners.map(([x, y]) => <circle cx={x} cy={y} r="2.7" fill="none" stroke="var(--accent)" stroke-width="1.5" class="rm-ring-c" />)}
 
-  <circle cx="24" cy="24" r="4.3" fill="var(--gold)" class="rm-core" />
+  <circle cx="24" cy="24" r="4.3" fill="var(--gold)" class="rm-core" style={`--d:${rippleDelay(24, 24)}s`} />
 </svg>
 
 <style>
@@ -69,23 +78,42 @@ const plus = [
     transform-box: fill-box;
     transform-origin: center;
   }
-  /* Breathing variant: the matrix gently extends and retracts, the core beats.
-     Used as the footer's "at work" status glyph. */
-  .is-breathing .rm-orbit {
+  /* Status ("breathe") variant: a light sweeps around the matrix. Each dot
+     pulses on a delay set by its angle, so a bright point travels the ring
+     like a slow comet, while the gold core holds a steady glow. Reads as live
+     rotation, not a flat pulse. */
+  .is-breathing .rm-dot-c,
+  .is-breathing .rm-dot-p {
     transform-box: fill-box;
     transform-origin: center;
-    animation: rmOrbitExtend 2.4s ease-in-out infinite;
+    animation: rmRipple 2.4s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
   }
   .is-breathing .rm-core {
-    animation: rmCoreBeat 2.4s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: rmRippleCore 2.4s ease-in-out infinite;
+    animation-delay: var(--d, 0s);
   }
-  @keyframes rmOrbitExtend {
-    0%, 100% { scale: 1; }
-    50% { scale: 1.12; }
+  @keyframes rmRipple {
+    0%, 35%, 65%, 100% {
+      opacity: 0.3;
+      scale: 0.85;
+    }
+    50% {
+      opacity: 1;
+      scale: 1.22;
+    }
   }
-  @keyframes rmCoreBeat {
-    0%, 100% { opacity: 0.75; scale: 1; }
-    50% { opacity: 1; scale: 1.1; }
+  @keyframes rmRippleCore {
+    0%, 35%, 65%, 100% {
+      opacity: 0.7;
+      scale: 1;
+    }
+    50% {
+      opacity: 1;
+      scale: 1.3;
+    }
   }
   /* cross phase: plus dots become rings; diagonal phase: corners become rings */
   .is-animated .rm-dot-p {

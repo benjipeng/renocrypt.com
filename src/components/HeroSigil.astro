@@ -1,217 +1,537 @@
 ---
 /**
- * Hero sigil: an alchemical instrument that visualizes "Matrix Alchemy".
- * Concentric rings of glyphs and matrix brackets orbit a pulsing core that
- * distills to a single gold node. Colors are theme variables, so the sigil
- * adapts to day and night. Motion is CSS-driven and yields to reduced-motion
- * via the global reset in global.css.
+ * Hero sigil — a chronosigil for "Matrix Alchemy".
+ *
+ * It doesn't tell the time; it *distills* it. One visual language throughout:
+ * every line is a sinusoid over an arc,
+ *   r(θ, t) = R + Σ Aᵢ(t) · sin(nᵢθ + φᵢ(t))
+ * and every amplitude Aᵢ(t) is itself a slow oscillator — the forms swell and
+ * subside, waves travel around the rings, and nothing ever rests. Few layers,
+ * distinct stroke weights:
+ *   - TRACK: a whisper-thin waveform circle on the outside — the day's path.
+ *   - DAY-ARC: the same waveform, drawn heavier over the elapsed fraction of
+ *     the 24h UTC day, its width breathing slowly; a sky glyph rides just
+ *     outside the gold "now" node (◑ dawn, ☉ day, ◐ dusk, ☾ night).
+ *   - NUMERALS (Futurist/Constructivist): each ring's number moves with its
+ *     ring — the hour laps the main ring once per 12h, the minute laps the
+ *     inner ring once per hour, the second orbits the core once per minute —
+ *     riding each ring's actual waveform, always upright, facing the reader.
+ *   - TOOLTIP: hovering the sigil fades in a plain mono readout under the
+ *     core (e.g. 22:04 UTC); it stays out of the art otherwise.
+ *   - FIGURE: two clean-stroked waveform rings. The main ring's harmonic
+ *     count is set by the UTC hour and crossfades to the next across the
+ *     hour; its stroke-width breathes over time and throbs with each real
+ *     second — the sinusoid itself stays pure, only the whole line's weight
+ *     changes. A hairline inner ring counters it.
+ *   - MATRIX: a faint phyllotaxis point-field behind everything, for depth.
+ *   - CORE: a constant gold node breathes at center — the distillate.
+ *
+ * Everything is computed client-side from real UTC at native frame rate; the
+ * server render seeds a composed default so no-JS / pre-hydration still reads
+ * as a finished instrument. Colors are theme tokens (day/night aware); motion
+ * yields to reduced-motion (a single static snapshot).
  */
 interface Props {
   class?: string;
 }
 const { class: cls = "" } = Astro.props;
 
-// Glyph ring: metals and operators, the two languages of the brief.
-const glyphs = [
-  { t: "Au", x: 480, y: 280, fill: "var(--gold)" },
-  { t: "Ag", x: 421, y: 421, fill: "var(--muted)" },
-  { t: "Ξ", x: 280, y: 480, fill: "var(--accent)" },
-  { t: "∇", x: 139, y: 421, fill: "var(--muted)" },
-  { t: "λ", x: 80, y: 280, fill: "var(--muted)" },
-  { t: "Σ", x: 139, y: 139, fill: "var(--accent)" },
-  { t: "π", x: 280, y: 80, fill: "var(--muted)" },
-  { t: "∂", x: 421, y: 139, fill: "var(--muted)" },
+const CX = 280;
+const CY = 280;
+const D2R = Math.PI / 180;
+const TAU = Math.PI * 2;
+const polar = (r: number, deg: number): [number, number] => [
+  +(CX + r * Math.cos((deg - 90) * D2R)).toFixed(2),
+  +(CY + r * Math.sin((deg - 90) * D2R)).toFixed(2),
 ];
+
+const R_DAY = 208;
+
+// The "matrix": a faint phyllotaxis point-field for depth + slow motion.
+const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+const field = Array.from({ length: 110 }, (_, i) => {
+  const r = 14.6 * Math.sqrt(i);
+  const th = i * GOLDEN;
+  return {
+    x: +(CX + r * Math.cos(th)).toFixed(1),
+    y: +(CY + r * Math.sin(th)).toFixed(1),
+    op: +Math.max(0.04, 0.22 * (1 - r / 190)).toFixed(3),
+    r: +Math.max(0.55, 1.5 - r / 170).toFixed(2),
+    fill: i < 3 ? "var(--gold)" : "var(--accent)",
+  };
+});
+
+// A closed ring as sinusoids over the circle. Shared shape: SSR + client.
+type Harmonic = { n: number; amp: number; phase: number };
+function waveRing(R: number, harmonics: Harmonic[], N: number): string {
+  const out: string[] = [];
+  for (let i = 0; i <= N; i++) {
+    const th = (i / N) * TAU;
+    let r = R;
+    for (const h of harmonics) r += h.amp * Math.sin(h.n * th + h.phase);
+    out.push(
+      `${(CX + r * Math.cos(th)).toFixed(1)},${(CY + r * Math.sin(th)).toFixed(1)}`
+    );
+  }
+  return out.join(" ");
+}
+
+// An open arc as a single sinusoid — the track and the day-arc share this.
+function waveArc(
+  R: number,
+  n: number,
+  amp: number,
+  phase: number,
+  fromDeg: number,
+  toDeg: number,
+  N: number
+): string {
+  let d = "";
+  for (let i = 0; i <= N; i++) {
+    const ang = fromDeg + (i / N) * (toDeg - fromDeg);
+    const r = R + amp * Math.sin(n * ang * D2R + phase);
+    const [x, y] = polar(r, ang);
+    d += `${i ? "L" : "M"} ${x} ${y} `;
+  }
+  return d;
+}
+
+// The radius of a waveform ring at one display angle (0° = top), so moving
+// numerals can ride their ring's actual crest instead of floating.
+function ringRAt(R: number, harmonics: Harmonic[], deg: number): number {
+  const th = (deg - 90) * D2R;
+  let r = R;
+  for (const h of harmonics) r += h.amp * Math.sin(h.n * th + h.phase);
+  return r;
+}
+
+// SSR defaults: mid-swell so the pre-JS frame is already alive.
+const H1D: Harmonic[] = [
+  { n: 7, amp: 11, phase: 0.8 },
+  { n: 8, amp: 5, phase: -1.1 },
+  { n: 3, amp: -3.5, phase: 0.5 },
+];
+const H2D: Harmonic[] = [
+  { n: 9, amp: 7, phase: 2.1 },
+  { n: 2, amp: 3.5, phase: 1.0 },
+];
+const ring1Default = waveRing(150, H1D, 240);
+const ring2Default = waveRing(104, H2D, 200);
+const trackDefault = waveArc(R_DAY, 7, 2.2, 0.4, 0, 360, 240);
+const dayArcDefault = waveArc(R_DAY, 7, 2.2, 0.4, 0, 96, 72);
+const dnR = R_DAY + 2.2 * Math.sin(7 * 96 * D2R + 0.4);
+const [dnx, dny] = polar(dnR, 96);
+// The default moment is 96° into the day = 06:24 UTC — dawn.
+const [skyx, skyy] = polar(234, 96);
+const skyDefault = "◑";
+const utcDefault = "06:24 UTC";
+// Kinetic numerals at that moment: 06 on the hour ring (192° of its 12h lap),
+// 24 on the minute ring (144°), 00 on the core orbit (0°).
+const [hhx, hhy] = polar(ringRAt(150, H1D, 192) + 16, 192);
+const [mmx, mmy] = polar(ringRAt(104, H2D, 144) + 13, 144);
+const [ssx, ssy] = polar(41, 0);
 ---
 
 <svg
+  id="cs-svg"
   viewBox="0 0 560 560"
   class={`hero-sigil ${cls}`}
   role="img"
-  aria-label="An alchemical instrument distilling a matrix into a single gold node"
+  aria-label="A generative instrument distilling the current UTC moment to a single gold node"
   xmlns="http://www.w3.org/2000/svg"
 >
   <defs>
-    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="var(--accent)" style="stop-opacity: var(--glow-accent)"></stop>
-      <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"></stop>
-    </radialGradient>
-    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="var(--gold)" style="stop-opacity: var(--glow-gold)"></stop>
+    <radialGradient id="csGold" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="var(--gold)" style="stop-opacity: var(--glow-gold)"
+      ></stop>
       <stop offset="100%" stop-color="var(--gold)" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="csAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="var(--accent)" style="stop-opacity: var(--glow-accent)"
+      ></stop>
+      <stop offset="70%" stop-color="var(--accent)" stop-opacity="0"></stop>
     </radialGradient>
   </defs>
 
-  <!-- flanking matrix brackets: the instrument is a bracketed matrix -->
-  <path
-    d="M40 198 H26 V362 H40"
-    stroke="var(--line-strong)"
-    stroke-width="2"
-    fill="none"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    opacity="0.5"></path>
-  <path
-    d="M520 198 H534 V362 H520"
-    stroke="var(--line-strong)"
-    stroke-width="2"
-    fill="none"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    opacity="0.5"></path>
+  <!-- soft emerald aura: one light source, for depth -->
+  <circle cx="280" cy="280" r="156" fill="url(#csAura)" opacity="0.3"></circle>
 
-  <!-- outer ring with ticks -->
-  <g class="orb spin-slow">
-    <circle
-      cx="280"
-      cy="280"
-      r="232"
-      fill="none"
-      stroke="var(--line-strong)"
-      stroke-width="1.4"
-      stroke-dasharray="2 22"></circle>
-    <circle cx="280" cy="48" r="3.4" fill="var(--accent)" class="twinkle"></circle>
-  </g>
-
-  <!-- glyph ring -->
-  <g class="orb glyphs">
+  <!-- the matrix: a faint point-field turning slowly behind everything -->
+  <g class="cs-field">
     {
-      glyphs.map((g) => (
-        <text
-          x={g.x}
-          y={g.y}
-          fill={g.fill}
-          font-family="var(--font-mono)"
-          font-size="21"
-          text-anchor="middle"
-          dominant-baseline="central"
-          opacity="0.9"
-        >
-          {g.t}
-        </text>
+      field.map((p) => (
+        <circle cx={p.x} cy={p.y} r={p.r} fill={p.fill} opacity={p.op} />
       ))
     }
   </g>
 
-  <!-- mid dashed ring -->
-  <g class="orb spin-mid">
-    <circle
-      cx="280"
-      cy="280"
-      r="160"
-      fill="none"
-      stroke="var(--accent)"
-      stroke-width="1.4"
-      stroke-dasharray="11 17"
-      opacity="0.55"></circle>
-    <circle cx="440" cy="280" r="3" fill="var(--gold)" class="twinkle"></circle>
-  </g>
+  <!-- flanking matrix brackets: the instrument is a bracketed matrix -->
+  <path
+    d="M44 196 H30 V364 H44"
+    stroke="var(--line-strong)"
+    stroke-width="2"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.5"></path>
+  <path
+    d="M516 196 H530 V364 H516"
+    stroke="var(--line-strong)"
+    stroke-width="2"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.5"></path>
 
-  <!-- inner bracket arcs framing the core -->
-  <g class="orb spin-in">
-    <path
-      d="M192 200 A112 112 0 0 0 192 360"
-      fill="none"
-      stroke="var(--accent)"
-      stroke-width="2"
-      stroke-linecap="round"
-      opacity="0.7"></path>
-    <path
-      d="M368 200 A112 112 0 0 1 368 360"
-      fill="none"
-      stroke="var(--accent)"
-      stroke-width="2"
-      stroke-linecap="round"
-      opacity="0.7"></path>
-  </g>
+  <!-- the figure: two waveform rings; the main one's stroke-width breathes -->
+  <polyline
+    id="cs-ring2"
+    points={ring2Default}
+    fill="none"
+    stroke="var(--accent)"
+    stroke-width="0.7"
+    stroke-linejoin="round"
+    opacity="0.35"></polyline>
+  <polyline
+    id="cs-ring1"
+    points={ring1Default}
+    fill="none"
+    stroke="var(--accent)"
+    stroke-width="1.6"
+    stroke-linejoin="round"
+    opacity="0.5"></polyline>
 
-  <!-- core: pulsing halo, ring, and the gold transmutation node -->
-  <circle cx="280" cy="280" r="58" fill="url(#coreGlow)" class="anchor core-halo"
+  <!-- the day's path: a whisper-thin waveform track... -->
+  <path
+    id="cs-track"
+    d={trackDefault}
+    fill="none"
+    stroke="var(--line-strong)"
+    stroke-width="1"
+    stroke-linejoin="round"
+    opacity="0.28"></path>
+
+  <!-- ...and the elapsed fraction of the UTC day, drawn heavier over it -->
+  <path
+    id="cs-dayarc"
+    d={dayArcDefault}
+    fill="none"
+    stroke="var(--accent)"
+    stroke-width="2.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.65"></path>
+
+  <!-- the gold "now" on the day-arc's leading edge, with the sky above it:
+       whatever the UTC sky is doing this moment (◑ dawn, ☉ day, ◐ dusk, ☾ night) -->
+  <circle id="cs-daynode" cx={dnx} cy={dny} r="4.6" fill="var(--gold)" class="cs-daynode"
   ></circle>
+  <text
+    id="cs-sky"
+    class="cs-mono"
+    x={skyx}
+    y={skyy}
+    font-size="13"
+    fill="var(--fg-soft)"
+    opacity="0.7"
+    text-anchor="middle"
+    dominant-baseline="central">{skyDefault}</text
+  >
+
+  <!-- kinetic numerals: each ring's number moves with its ring. The hour laps
+       the main ring in 12h, the minute laps the inner ring in 1h, the second
+       orbits the core in 60s — riding each waveform, always upright. -->
+  <text
+    id="cs-hh"
+    class="cs-mono"
+    x={hhx}
+    y={hhy}
+    font-size="13"
+    letter-spacing="1"
+    fill="var(--fg-soft)"
+    opacity="0.7"
+    text-anchor="middle"
+    dominant-baseline="central">06</text
+  >
+  <text
+    id="cs-mm"
+    class="cs-mono"
+    x={mmx}
+    y={mmy}
+    font-size="11.5"
+    letter-spacing="1"
+    fill="var(--fg-soft)"
+    opacity="0.6"
+    text-anchor="middle"
+    dominant-baseline="central">24</text
+  >
+  <text
+    id="cs-ss"
+    class="cs-mono"
+    x={ssx}
+    y={ssy}
+    font-size="9.5"
+    letter-spacing="1"
+    fill="var(--accent)"
+    opacity="0.75"
+    text-anchor="middle"
+    dominant-baseline="central">00</text
+  >
+
+  <!-- core: a breathing gold halo, a thin emerald ring, and the distilled node -->
+  <circle cx="280" cy="280" r="52" fill="url(#csGold)" class="cs-core"></circle>
   <circle
     cx="280"
     cy="280"
-    r="36"
+    r="30"
     fill="none"
     stroke="var(--accent)"
-    stroke-width="1.5"
-    opacity="0.6"></circle>
-  <line
-    x1="280"
-    y1="280"
-    x2="280"
-    y2="232"
-    stroke="var(--accent)"
-    stroke-width="2"
-    stroke-linecap="round"
-    class="spark"></line>
-  <circle cx="280" cy="280" r="22" fill="url(#goldGlow)" class="anchor gold-halo"
-  ></circle>
-  <circle cx="280" cy="280" r="11" fill="var(--gold)"></circle>
+    stroke-width="1.2"
+    opacity="0.5"></circle>
+  <circle cx="280" cy="280" r="9" fill="var(--gold)"></circle>
+
+  <!-- the moment, stated plainly — but only when asked: fades in on hover -->
+  <text
+    id="cs-utc"
+    class="cs-mono cs-utc"
+    x="280"
+    y="352"
+    font-size="11"
+    fill="var(--muted)"
+    text-anchor="middle"
+    letter-spacing="2.2">{utcDefault}</text
+  >
 </svg>
 
 <style>
-  .orb,
-  .anchor {
-    transform-box: fill-box;
-    transform-origin: center;
+  .cs-core {
+    transform-box: view-box;
+    transform-origin: 280px 280px;
+    animation: cs-breathe 6.5s ease-in-out infinite;
   }
-  .spin-slow {
-    animation: spin 64s linear infinite;
+  .cs-field {
+    transform-box: view-box;
+    transform-origin: 280px 280px;
+    animation: cs-spin 220s linear infinite;
   }
-  .glyphs {
-    animation: spin 96s linear infinite reverse;
+  .cs-daynode {
+    filter: drop-shadow(0 0 5px color-mix(in oklab, var(--gold) 70%, transparent));
   }
-  .spin-mid {
-    animation: spin 46s linear infinite reverse;
+  .cs-mono {
+    font-family: "Spline Sans Mono Variable", ui-monospace, monospace;
   }
-  .spin-in {
-    animation: spin 34s linear infinite;
+  .cs-utc {
+    opacity: 0;
+    transition: opacity 0.35s ease;
   }
-  .core-halo {
-    animation: breathe 6.5s ease-in-out infinite;
+  svg:hover .cs-utc {
+    opacity: 0.85;
   }
-  .gold-halo {
-    animation: breathe 4.5s ease-in-out infinite;
-  }
-  .spark {
-    animation: rise 5s ease-in-out infinite;
-  }
-  .twinkle {
-    animation: tw 5.6s ease-in-out infinite;
-  }
-  @keyframes spin {
+  @keyframes cs-spin {
     to {
       transform: rotate(360deg);
     }
   }
-  @keyframes breathe {
-    0%,
-    100% {
-      opacity: 0.5;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.95;
-      transform: scale(1.07);
-    }
-  }
-  @keyframes rise {
-    0%,
-    100% {
-      opacity: 0.15;
-    }
-    50% {
-      opacity: 0.85;
-    }
-  }
-  @keyframes tw {
+  @keyframes cs-breathe {
     0%,
     100% {
       opacity: 0.55;
+      transform: scale(1);
     }
     50% {
       opacity: 1;
+      transform: scale(1.06);
     }
   }
 </style>
+
+<script>
+  const svg = document.getElementById("cs-svg");
+  if (svg) {
+    const CX = 280;
+    const CY = 280;
+    const TAU = Math.PI * 2;
+    const D2R = Math.PI / 180;
+    const R_DAY = 208;
+    const polar = (r: number, deg: number) => [
+      CX + r * Math.cos((deg - 90) * D2R),
+      CY + r * Math.sin((deg - 90) * D2R),
+    ];
+    const f = (n: number) => n.toFixed(1);
+    const q = (id: string) => svg.querySelector<SVGElement>("#" + id);
+
+    const ring1 = q("cs-ring1");
+    const ring2 = q("cs-ring2");
+    const track = q("cs-track");
+    const dayarc = q("cs-dayarc");
+    const daynode = q("cs-daynode");
+    const sky = q("cs-sky");
+    const utc = q("cs-utc");
+    const hh = q("cs-hh");
+    const mm = q("cs-mm");
+    const ss = q("cs-ss");
+
+    type Harmonic = { n: number; amp: number; phase: number };
+    function waveRing(R: number, harmonics: Harmonic[], N: number) {
+      let out = "";
+      for (let i = 0; i <= N; i++) {
+        const th = (i / N) * TAU;
+        let r = R;
+        for (const h of harmonics) r += h.amp * Math.sin(h.n * th + h.phase);
+        out += `${(CX + r * Math.cos(th)).toFixed(1)},${(CY + r * Math.sin(th)).toFixed(1)} `;
+      }
+      return out;
+    }
+
+    function waveArc(
+      R: number,
+      n: number,
+      amp: number,
+      phase: number,
+      fromDeg: number,
+      toDeg: number,
+      N: number
+    ) {
+      let d = "";
+      for (let i = 0; i <= N; i++) {
+        const ang = fromDeg + (i / N) * (toDeg - fromDeg);
+        const r = R + amp * Math.sin(n * ang * D2R + phase);
+        const [x, y] = polar(r, ang);
+        d += `${i ? "L" : "M"} ${f(x)} ${f(y)} `;
+      }
+      return d;
+    }
+
+    // ring radius at one display angle, so numerals ride their waveform
+    function ringRAt(R: number, harmonics: Harmonic[], deg: number) {
+      const th = (deg - 90) * D2R;
+      let r = R;
+      for (const h of harmonics) r += h.amp * Math.sin(h.n * th + h.phase);
+      return r;
+    }
+
+    const p2 = (n: number) => String(n).padStart(2, "0");
+    // numerals orbit their rings but always stay upright, facing the reader
+    const setNum = (
+      el: SVGElement | null,
+      text: string,
+      deg: number,
+      r: number
+    ) => {
+      if (!el) return;
+      const [x, y] = polar(r, deg);
+      el.setAttribute("x", f(x));
+      el.setAttribute("y", f(y));
+      if (el.textContent !== text) el.textContent = text;
+    };
+
+    function update() {
+      const now = new Date();
+      const h = now.getUTCHours();
+      const m = now.getUTCMinutes();
+      const s = now.getUTCSeconds();
+      const ms = now.getUTCMilliseconds();
+      const t = ((h * 60 + m) * 60 + s) + ms / 1000; // seconds of the UTC day
+
+      // amplitude envelopes: slow oscillators on incommensurate periods, kept
+      // off the floor so the figure never flattens or stalls
+      const e1 = 0.55 + 0.45 * Math.sin((TAU * t) / 9.7);
+      const e2 = Math.sin((TAU * t) / 14.3 + 1.2);
+      const e3 = 0.55 + 0.45 * Math.sin((TAU * t) / 7.3 + 2.4);
+      const e4 = Math.sin((TAU * t) / 18.1 + 0.6);
+      const eT = 0.65 + 0.35 * Math.sin((TAU * t) / 23.7 + 0.9);
+      const shim = Math.sin((TAU * t) / 3.4); // fast micro-shimmer
+
+      // each real second, a throb through the ribbon's width: rises from
+      // zero, peaks early, decays — continuous at the boundary, never a snap
+      const u = ms / 1000;
+      const pulse = 8 * u * Math.exp(-4 * u);
+
+      const uHr = (m + s / 60 + ms / 60000) / 60; // hour fraction, crossfade
+      const nA = 5 + (h % 6); // main harmonic count, one per UTC hour
+      const phiA = TAU * ((t % 31) / 31);
+      const phiB = -TAU * ((t % 23) / 23);
+      const phiT = TAU * ((t % 61) / 61);
+
+      const H1: Harmonic[] = [
+        { n: nA, amp: 13 * e1 * (1 - uHr), phase: phiA },
+        { n: nA + 1, amp: 13 * e1 * uHr, phase: -phiA * 1.4 },
+        { n: 3, amp: 5.5 * e2, phase: phiA * 0.6 },
+        { n: 2 * nA + 1, amp: 1.3 * shim, phase: -phiA * 2 },
+      ];
+      const H2: Harmonic[] = [
+        { n: nA + 2, amp: 10 * e3, phase: phiB },
+        { n: 2, amp: 4 * e4, phase: phiB * 0.5 },
+      ];
+      ring1?.setAttribute("points", waveRing(150, H1, 240));
+      // the line's weight breathes as a whole — the sinusoid stays pure
+      ring1?.setAttribute(
+        "stroke-width",
+        (1.3 + 0.8 * e1 + 1.3 * pulse).toFixed(2)
+      );
+      ring2?.setAttribute("points", waveRing(104, H2, 200));
+
+      // energy shows as glow, but never dims to a stall
+      ring1?.setAttribute("opacity", (0.42 + 0.22 * e1).toFixed(2));
+      ring2?.setAttribute("opacity", (0.24 + 0.2 * e3).toFixed(2));
+
+      // the day's path — track and elapsed arc share one waveform, so the
+      // arc rides the track exactly; the gold "now" sits on its leading edge
+      const dayAngle = (t / 86400) * 360;
+      const ampT = 2.6 * eT;
+      track?.setAttribute("d", waveArc(R_DAY, 7, ampT, phiT, 0, 360, 240));
+      dayarc?.setAttribute(
+        "d",
+        waveArc(R_DAY, 7, ampT, phiT, 0, dayAngle, Math.max(12, Math.round(dayAngle / 1.5)))
+      );
+      dayarc?.setAttribute(
+        "stroke-width",
+        (2.1 + 0.5 * Math.sin((TAU * t) / 11.3 + 1)).toFixed(2)
+      );
+      const rNow = R_DAY + ampT * Math.sin(7 * dayAngle * D2R + phiT);
+      const [Dx, Dy] = polar(rNow, dayAngle);
+      daynode?.setAttribute("cx", f(Dx));
+      daynode?.setAttribute("cy", f(Dy));
+
+      // the symbols ARE the time: the sky glyph rides with "now" and shows
+      // what the UTC sky is doing this moment; the readout states it plainly
+      const [Gx, Gy] = polar(234, dayAngle);
+      sky?.setAttribute("x", f(Gx));
+      sky?.setAttribute("y", f(Gy));
+      const hf = h + m / 60;
+      const glyph =
+        hf < 5 ? "☾" : hf < 7 ? "◑" : hf < 17 ? "☉" : hf < 19 ? "◐" : "☾";
+      if (sky && sky.textContent !== glyph) {
+        sky.textContent = glyph;
+        sky.setAttribute(
+          "fill",
+          glyph === "☉" ? "var(--gold)" : "var(--fg-soft)"
+        );
+      }
+      const stamp = `${p2(h)}:${p2(m)} UTC`;
+      if (utc && utc.textContent !== stamp) utc.textContent = stamp;
+
+      // kinetic numerals: each number moves with — and rides — its own ring.
+      // Hour laps the main ring in 12h, minute laps the inner ring in 1h,
+      // second orbits the core in 60s.
+      const angH = (((h % 12) + m / 60 + s / 3600) / 12) * 360;
+      const angM = ((m + s / 60 + ms / 60000) / 60) * 360;
+      const angS = ((s + ms / 1000) / 60) * 360;
+      setNum(hh, p2(h), angH, ringRAt(150, H1, angH) + 16);
+      setNum(mm, p2(m), angM, ringRAt(104, H2, angM) + 13);
+      setNum(ss, p2(s), angS, 41);
+    }
+
+    update();
+    const motionOK = window.matchMedia(
+      "(prefers-reduced-motion: no-preference)"
+    ).matches;
+    if (motionOK) {
+      const loop = () => {
+        update();
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }
+  }
+</script>
