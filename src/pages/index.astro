@@ -8,18 +8,23 @@ import HeroSigil from "../components/HeroSigil.astro";
 // thread of its own. Live sections link; the coming one is a statement.
 const threads = [
   {
+    n: "01",
     glyph: "Ξ",
     title: "The models",
     body: "How modern machine learning actually works, from attention and transformers to evaluation that holds up.",
     href: "/posts/",
+    cta: "Read ML/AI",
   },
   {
+    n: "02",
     glyph: "{ }",
     title: "The machines",
     body: "Engineering that ships. Pipelines, infrastructure, and the craft of running it in the real world.",
     href: "/dev/",
+    cta: "Read Dev",
   },
   {
+    n: "03",
     glyph: "⊕",
     title: "The ciphers",
     body: "Cryptography and the hard edges of systems built to be trusted.",
@@ -101,16 +106,22 @@ const threads = [
           t.href ? (
             <a
               href={t.href}
-              class="pillar group bg-bg px-1 py-12 sm:px-7 lg:py-14"
+              class="pillar group relative flex flex-col bg-bg px-6 py-12 sm:px-7 lg:px-8 lg:py-16"
             >
-              <div
-                class="pillar-glyph font-mono text-2xl text-gold"
-                aria-hidden="true"
-              >
-                {t.glyph}
+              <span class="pillar-accent" aria-hidden="true" />
+              <div class="flex items-start justify-between">
+                <span
+                  class="pillar-glyph font-mono text-2xl text-gold"
+                  aria-hidden="true"
+                >
+                  {t.glyph}
+                </span>
+                <span class="pillar-index font-mono text-[0.7rem] tracking-[0.24em] text-muted">
+                  {t.n}
+                </span>
               </div>
               <h2
-                class="pillar-title mt-5 font-display text-lg"
+                class="pillar-title mt-6 font-display text-lg"
                 style="font-weight:600"
               >
                 {t.title}
@@ -118,29 +129,52 @@ const threads = [
               <p class="mt-2.5 text-[0.95rem] leading-relaxed text-muted">
                 {t.body}
               </p>
+              <span class="pillar-cta mt-auto inline-flex items-center gap-1.5 pt-8 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-accent">
+                {t.cta}
+                <span class="pillar-arrow" aria-hidden="true">
+                  &rarr;
+                </span>
+              </span>
             </a>
           ) : (
-            <div class="bg-bg px-1 py-12 sm:px-7 lg:py-14">
-              <div class="pillar-glyph font-mono text-2xl text-gold" aria-hidden="true">
-                {t.glyph}
+            <div class="pillar is-soon relative flex flex-col bg-bg px-6 py-12 sm:px-7 lg:px-8 lg:py-16">
+              <span class="pillar-accent" aria-hidden="true" />
+              <div class="flex items-start justify-between">
+                <span
+                  class="pillar-glyph font-mono text-2xl text-gold"
+                  aria-hidden="true"
+                >
+                  {t.glyph}
+                </span>
+                <span class="pillar-index font-mono text-[0.7rem] tracking-[0.24em] text-muted">
+                  {t.n}
+                </span>
               </div>
-              <div class="mt-5 flex items-baseline gap-2.5">
-                <h2 class="font-display text-lg" style="font-weight:600">
-                  {t.title}
-                </h2>
-                {t.soon && (
-                  <span class="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-muted">
-                    next
-                  </span>
-                )}
-              </div>
+              <h2 class="mt-6 font-display text-lg" style="font-weight:600">
+                {t.title}
+              </h2>
               <p class="mt-2.5 text-[0.95rem] leading-relaxed text-muted">
                 {t.body}
               </p>
+              <span class="mt-auto inline-flex items-center gap-2 pt-8 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted">
+                <span class="pillar-soon-dot" aria-hidden="true" />
+                On the bench
+              </span>
             </div>
           )
         )
       }
+    </div>
+  </section>
+
+  <!-- Coda: a single distilled gold node closes the page -- a quiet full stop,
+       no copy. -->
+  <section
+    class="coda mx-auto max-w-6xl px-5 py-16 sm:px-8 lg:py-20"
+    data-reveal
+  >
+    <div class="coda-rule" aria-hidden="true">
+      <span class="coda-node"></span>
     </div>
   </section>
 </Base>

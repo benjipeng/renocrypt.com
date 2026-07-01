@@ -154,9 +154,9 @@
   }
 
   /* Light-mode parity for the hero sigil: scope a warmer, brighter glow to the
-     mark alone (via local var overrides) so the "distilled gold" node still
-     visibly emits on parchment, without touching the tuned global tokens that
-     the other pages' art relies on. */
+     mark alone (via local var overrides) so the distilled gold node still
+     visibly emits on parchment, without touching the tuned global tokens the
+     other pages' art relies on. */
   [data-theme="light"] .hero-sigil {
     --glow-gold: 0.6;
     --glow-accent: 0.34;
@@ -216,6 +216,93 @@
   .pillar:hover .pillar-glyph {
     transform: translateY(-2px);
     text-shadow: 0 0 18px color-mix(in oklab, var(--gold) 55%, transparent);
+  }
+  /* Elevated triptych: each cell reads as an instrument panel. A top hairline
+     grows from center and lights emerald on hover, the index numeral warms,
+     and the CTA arrow steps forward. */
+  .pillar-accent {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+    opacity: 0;
+    transform: scaleX(0.35);
+    transition:
+      opacity 0.3s ease,
+      transform 0.35s ease;
+  }
+  .pillar:hover .pillar-accent {
+    opacity: 0.75;
+    transform: scaleX(1);
+  }
+  .pillar-index {
+    opacity: 0.5;
+    transition:
+      opacity 0.2s ease,
+      color 0.2s ease;
+  }
+  .pillar:hover .pillar-index {
+    opacity: 0.9;
+    color: var(--accent);
+  }
+  .pillar-cta {
+    opacity: 0.82;
+    transition: opacity 0.2s ease;
+  }
+  .pillar:hover .pillar-cta {
+    opacity: 1;
+  }
+  .pillar-arrow {
+    transition: transform 0.25s ease;
+  }
+  .pillar:hover .pillar-arrow {
+    transform: translateX(3px);
+  }
+  .pillar-soon-dot {
+    width: 0.42rem;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: var(--gold);
+    box-shadow: 0 0 8px color-mix(in oklab, var(--gold) 55%, transparent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .pillar-soon-dot {
+      animation: bench-pulse 3.2s ease-in-out infinite;
+    }
+  }
+  @keyframes bench-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* Coda: a centered hairline distilling to one gold node -- the hero sigil's
+     transmutation payoff, re-stated as the page's closing beat. */
+  .coda-rule {
+    position: relative;
+    height: 1px;
+    width: min(26rem, 70%);
+    margin: 0 auto;
+    background: linear-gradient(to right, transparent, var(--line-strong), transparent);
+  }
+  .coda-node {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--gold);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 12px color-mix(in oklab, var(--gold) 55%, transparent);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .coda-node {
+      animation: coda-breathe 5s ease-in-out infinite;
+    }
+  }
+  @keyframes coda-breathe {
+    0%, 100% { box-shadow: 0 0 10px color-mix(in oklab, var(--gold) 45%, transparent); }
+    50% { box-shadow: 0 0 22px color-mix(in oklab, var(--gold) 78%, transparent); }
   }
 
   /* Entrance reveal: gentle assemble-on-load / on-scroll. The hidden start
