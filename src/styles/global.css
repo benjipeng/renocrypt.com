@@ -1,0 +1,627 @@
+@import "@fontsource-variable/unbounded";
+@import "@fontsource-variable/schibsted-grotesk";
+@import "@fontsource-variable/spline-sans-mono";
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+/* Day/night switch driven by data-theme on <html>. Dark is the default. */
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
+:root {
+  color-scheme: dark;
+  /* near-pitch canvas; the only light comes from the emerald aura */
+  --bg: #04060a;
+  --panel: #0b0f14;
+  --fg: #e8eef0;
+  --muted: #8b97a3;
+  /* primary accent: Pantone 00AB84 family, lifted for legibility on near-black */
+  --accent: #16c79a;
+  --accent-deep: #00ab84;
+  --gold: #e6c98c;
+  --line: rgba(232, 238, 240, 0.08);
+  --line-strong: rgba(232, 238, 240, 0.16);
+  --halo: rgba(0, 171, 132, 0.22);
+  /* radial glow stop-opacities: strong against near-black, where the "light
+     source" illusion works. Dimmed on parchment (see [data-theme="light"]),
+     where the same gradient would otherwise read as a flat smudge. */
+  --glow-accent: 0.5;
+  --glow-gold: 0.82;
+  /* circuit-trace lines: same family as --line-strong, but a dedicated
+     token so it can be pushed darker on parchment without touching the
+     lighter --line-strong used for borders/rules everywhere else */
+  --trace: rgba(232, 238, 240, 0.16);
+  /* one soft-foreground step between full --fg and --muted, for ledes */
+  --fg-soft: color-mix(in oklab, var(--fg) 76%, var(--muted));
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  /* parchment canvas kept as-is */
+  --bg: #f2eee2;
+  --panel: #fbf9f2;
+  --fg: #191525;
+  --muted: #5c5570;
+  /* deepened emerald for contrast on parchment */
+  --accent: #00795e;
+  --accent-deep: #00563f;
+  --gold: #9a6b1f;
+  --line: rgba(25, 21, 37, 0.12);
+  --line-strong: rgba(25, 21, 37, 0.22);
+  --halo: rgba(0, 123, 94, 0.1);
+  --trace: rgba(25, 21, 37, 0.4);
+  --glow-accent: 0.22;
+  --glow-gold: 0.4;
+  --fg-soft: color-mix(in oklab, var(--fg) 78%, var(--muted));
+}
+
+/* Inline so utilities resolve through the theme vars and switch live. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-fg-soft: var(--fg-soft);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-gold: var(--gold);
+  --color-line: var(--line);
+  --font-display: "Unbounded Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Spline Sans Mono Variable", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 32%, transparent);
+    color: var(--fg);
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Mono eyebrow: the matrix/terminal voice used for labels and metadata. */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  /* A hairline that fades, echoing the banner's rule. */
+  .rule {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--line-strong),
+      transparent
+    );
+  }
+
+  /* Hero atmosphere: one soft light source washing the whole hero, so the
+     headline sits in the same glow as the sigil instead of on dead-flat black.
+     Static gradient -- reduced-motion irrelevant, near-zero cost. */
+  .hero-wash::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      130% 90% at 12% 6%,
+      color-mix(in oklab, var(--accent) 7%, transparent),
+      transparent 55%
+    );
+  }
+  [data-theme="light"] .hero-wash::before {
+    background: radial-gradient(
+      130% 90% at 12% 6%,
+      color-mix(in oklab, var(--gold) 10%, transparent),
+      transparent 55%
+    );
+  }
+
+  /* Light-mode parity for the hero sigil: scope a warmer, brighter glow to the
+     mark alone (via local var overrides) so the "distilled gold" node still
+     visibly emits on parchment, without touching the tuned global tokens that
+     the other pages' art relies on. */
+  [data-theme="light"] .hero-sigil {
+    --glow-gold: 0.6;
+    --glow-accent: 0.34;
+  }
+
+  /* CTAs: lift + emit light on hover, and acknowledge the press. */
+  .cta-primary {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  .cta-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px -8px color-mix(in oklab, var(--accent) 50%, transparent);
+  }
+  .cta-primary:active {
+    transform: translateY(0) scale(0.985);
+  }
+  .cta-ghost {
+    transition:
+      transform 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+  .cta-ghost:active {
+    transform: translateY(0) scale(0.985);
+  }
+
+  /* Nav links: a left-origin underline wipe that also fires on focus-visible. */
+  .nav-link {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: left 100%;
+    background-size: 0 1px;
+    transition:
+      background-size 0.22s ease,
+      color 0.2s ease;
+  }
+  .nav-link:hover,
+  .nav-link:focus-visible {
+    background-size: 100% 1px;
+    color: var(--accent);
+  }
+
+  /* Sections/pillars as a navigable index: title lights, glyph lifts + blooms. */
+  .pillar-title {
+    transition: color 0.2s ease;
+  }
+  .pillar:hover .pillar-title {
+    color: var(--accent);
+  }
+  .pillar-glyph {
+    transition:
+      transform 0.3s ease,
+      text-shadow 0.3s ease;
+  }
+  .pillar:hover .pillar-glyph {
+    transform: translateY(-2px);
+    text-shadow: 0 0 18px color-mix(in oklab, var(--gold) 55%, transparent);
+  }
+
+  /* Entrance reveal: gentle assemble-on-load / on-scroll. The hidden start
+     state is applied only when <html> carries .reveal-ready, which the head
+     script adds solely when motion is allowed -- so no-JS and reduced-motion
+     render fully visible with no FOUC. */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal-ready [data-reveal] {
+      opacity: 0;
+      transform: translateY(10px);
+      transition:
+        opacity 0.5s cubic-bezier(0.22, 0.61, 0.36, 1),
+        transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+      transition-delay: var(--reveal-delay, 0ms);
+    }
+    .reveal-ready [data-reveal].is-in {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Footer status: the gerund fades as it cycles, and the ellipsis extends
+     and retracts, a nod to Claude Code's "working" indicator. The ellipsis
+     stays visible and still under reduced-motion. */
+  [data-status-word] {
+    transition: opacity 0.26s ease;
+  }
+  .ell span {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ell span {
+      opacity: 0;
+      animation-duration: 1.6s;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
+    }
+    .ell span:nth-child(1) {
+      animation-name: ell1;
+    }
+    .ell span:nth-child(2) {
+      animation-name: ell2;
+    }
+    .ell span:nth-child(3) {
+      animation-name: ell3;
+    }
+  }
+  @keyframes ell1 {
+    0%, 100% { opacity: 0; }
+    20%, 80% { opacity: 1; }
+  }
+  @keyframes ell2 {
+    0%, 100% { opacity: 0; }
+    40%, 60% { opacity: 1; }
+  }
+  @keyframes ell3 {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+  }
+
+  /* Section header art: responsive, theme-token driven generative SVGs. */
+  .art-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* Collapsing wordmark: RenoCrypt folds to R\ on scroll. R stays, the
+     emerald migrates from "Crypt" onto the slash. */
+  .reno-wm {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    white-space: pre;
+  }
+  .reno-wm .ch {
+    display: inline-block;
+    overflow: hidden;
+    max-width: 2ch;
+    opacity: 1;
+    transition:
+      max-width 0.5s cubic-bezier(0.76, 0, 0.24, 1),
+      opacity 0.34s ease,
+      transform 0.5s cubic-bezier(0.76, 0, 0.24, 1);
+  }
+  .reno-wm .em {
+    color: var(--accent);
+  }
+  .reno-wm .slash {
+    display: inline-block;
+    overflow: hidden;
+    max-width: 0;
+    opacity: 0;
+    color: var(--accent);
+    font-weight: 700;
+    transition:
+      max-width 0.45s cubic-bezier(0.76, 0, 0.24, 1) 0.22s,
+      opacity 0.3s ease 0.3s;
+  }
+  .reno-wm.is-collapsed .rest .ch {
+    max-width: 0;
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+  .reno-wm.is-collapsed .slash {
+    max-width: 1.4ch;
+    opacity: 1;
+  }
+  /* rightmost letter folds first */
+  .reno-wm .rest .ch:nth-child(8) { transition-delay: 0s; }
+  .reno-wm .rest .ch:nth-child(7) { transition-delay: 0.035s; }
+  .reno-wm .rest .ch:nth-child(6) { transition-delay: 0.07s; }
+  .reno-wm .rest .ch:nth-child(5) { transition-delay: 0.105s; }
+  .reno-wm .rest .ch:nth-child(4) { transition-delay: 0.14s; }
+  .reno-wm .rest .ch:nth-child(3) { transition-delay: 0.175s; }
+  .reno-wm .rest .ch:nth-child(2) { transition-delay: 0.21s; }
+  .reno-wm .rest .ch:nth-child(1) { transition-delay: 0.245s; }
+  @media (prefers-reduced-motion: reduce) {
+    .reno-wm .ch,
+    .reno-wm .slash {
+      transition: none;
+    }
+  }
+  /* On narrow phones, keep the wordmark in its compact R\ state so the nav has
+     breathing room (the mark + R\ reads as the brand at small sizes). */
+  @media (max-width: 30rem) {
+    .reno-wm .rest .ch {
+      max-width: 0;
+      opacity: 0;
+    }
+    .reno-wm .slash {
+      max-width: 1.4ch;
+      opacity: 1;
+    }
+  }
+
+  .reno-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.28rem 0.62rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition:
+      border-color 0.2s ease,
+      color 0.2s ease,
+      background-color 0.2s ease;
+  }
+  .reno-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background-color: color-mix(in oklab, var(--accent) 9%, transparent);
+  }
+
+  .article-card {
+    display: block;
+    border-top: 1px solid var(--line);
+    padding: 1.5rem 0;
+    color: var(--fg);
+  }
+  .article-card h2,
+  .article-card h3 {
+    transition: color 0.2s ease;
+  }
+  .article-card:hover h2,
+  .article-card:hover h3 {
+    color: var(--accent);
+  }
+
+  .article-hero {
+    position: relative;
+    display: flex;
+    min-height: clamp(27rem, 58vh, 43rem);
+    align-items: flex-end;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    isolation: isolate;
+  }
+  .article-hero::before {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    content: "";
+    background:
+      linear-gradient(
+        to top,
+        var(--bg) 0%,
+        color-mix(in oklab, var(--bg) 82%, transparent) 35%,
+        color-mix(in oklab, var(--bg) 35%, transparent) 68%,
+        color-mix(in oklab, var(--bg) 16%, transparent) 100%
+      ),
+      linear-gradient(
+        to right,
+        color-mix(in oklab, var(--bg) 70%, transparent),
+        transparent 68%
+      );
+  }
+  .article-hero-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .article-hero-content {
+    position: relative;
+    z-index: 2;
+    padding-top: 8rem;
+    padding-bottom: clamp(3rem, 8vw, 5.4rem);
+  }
+  .article-hero-title {
+    max-width: 58rem;
+    color: var(--fg);
+    text-shadow: 0 1px 24px color-mix(in oklab, var(--bg) 90%, transparent);
+  }
+  .article-hero-description,
+  .article-hero-meta {
+    color: color-mix(in oklab, var(--fg) 76%, var(--muted));
+    text-shadow: 0 1px 18px color-mix(in oklab, var(--bg) 85%, transparent);
+  }
+  @media (max-width: 720px) {
+    .article-hero {
+      min-height: 32rem;
+    }
+    .article-hero-content {
+      padding-top: 6rem;
+      padding-bottom: 2.8rem;
+    }
+  }
+
+  .article-body {
+    max-width: 74ch;
+    color: var(--fg);
+    font-size: 1.03rem;
+    line-height: 1.82;
+  }
+  .article-body > * + * {
+    margin-top: 1.15rem;
+  }
+  .article-body h2,
+  .article-body h3,
+  .article-body h4 {
+    margin-top: 2.4rem;
+    line-height: 1.18;
+  }
+  .article-body h2 {
+    font-size: clamp(1.55rem, 3vw, 2rem);
+  }
+  .article-body h3 {
+    font-size: 1.24rem;
+  }
+  .article-body h4 {
+    font-size: 1.05rem;
+  }
+  .article-body a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.2em;
+  }
+  .article-body ul,
+  .article-body ol {
+    padding-left: 1.35rem;
+  }
+  .article-body li + li {
+    margin-top: 0.4rem;
+  }
+  .article-body blockquote {
+    border-left: 2px solid var(--accent);
+    padding-left: 1rem;
+    color: var(--muted);
+  }
+  .article-body :not(pre) > code {
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    background: color-mix(in oklab, var(--panel) 82%, var(--fg) 4%);
+    padding: 0.1rem 0.28rem;
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+  }
+  .article-body pre {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 0.45rem;
+    background: var(--panel);
+    padding: 1rem;
+    line-height: 1.6;
+  }
+  .article-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.35rem;
+  }
+  .article-body table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .article-body th,
+  .article-body td {
+    border-bottom: 1px solid var(--line);
+    padding: 0.55rem;
+    text-align: left;
+  }
+  .article-body .katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.25rem 0;
+  }
+
+  .article-toc {
+    position: sticky;
+    top: 5.5rem;
+    align-self: start;
+    display: none;
+    border-left: 1px solid var(--line);
+    padding-left: 1rem;
+  }
+  .article-toc a {
+    display: block;
+    color: var(--muted);
+    font-size: 0.83rem;
+    line-height: 1.35;
+    transition: color 0.2s ease;
+  }
+  .article-toc a:hover {
+    color: var(--accent);
+  }
+  .article-toc .toc-sub {
+    padding-left: 0.75rem;
+    font-size: 0.78rem;
+  }
+  @media (min-width: 1024px) {
+    .article-toc {
+      display: block;
+    }
+  }
+
+  .reno-alert {
+    border-left: 2px solid var(--accent);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    padding: 0.9rem 1rem;
+    color: var(--fg);
+  }
+  .reno-badge {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 0.35rem;
+    background: color-mix(in oklab, var(--panel) 84%, var(--accent) 8%);
+    padding: 0.18rem 0.45rem;
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+    line-height: 1.45;
+  }
+  .reno-gallery {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .reno-gallery img {
+    flex: 1 1 220px;
+    min-width: 0;
+    object-fit: contain;
+  }
+  .reno-figure {
+    margin: 1.4rem 0;
+  }
+  .reno-figure figcaption {
+    margin-top: 0.55rem;
+    color: var(--muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .reno-typeit {
+    border-block: 1px solid var(--line);
+    padding: 1rem 0;
+    color: var(--gold);
+    font-family: var(--font-display);
+    font-weight: 600;
+  }
+  .grid-w10 { width: 10%; }
+  .grid-w20 { width: 20%; }
+  .grid-w25 { width: 25%; }
+  .grid-w30 { width: 30%; }
+  .grid-w33 { width: 33%; }
+  .grid-w40 { width: 40%; }
+  .grid-w50 { width: 50%; }
+  .grid-w60 { width: 60%; }
+  @media (max-width: 720px) {
+    .grid-w10,
+    .grid-w20,
+    .grid-w25,
+    .grid-w30,
+    .grid-w33,
+    .grid-w40,
+    .grid-w50,
+    .grid-w60 {
+      width: 100%;
+    }
+  }
+}

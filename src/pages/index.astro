@@ -1,0 +1,146 @@
+---
+import Base from "../layouts/Base.astro";
+import HeroSigil from "../components/HeroSigil.astro";
+
+// The three threads. ML/AI is the substance today; security is the frontier
+// we're turning to next; engineering is the craft underneath both. Math is
+// implicit ("first principles"), explained where a piece needs it, not a
+// thread of its own. Live sections link; the coming one is a statement.
+const threads = [
+  {
+    glyph: "Ξ",
+    title: "The models",
+    body: "How modern machine learning actually works, from attention and transformers to evaluation that holds up.",
+    href: "/posts/",
+  },
+  {
+    glyph: "{ }",
+    title: "The machines",
+    body: "Engineering that ships. Pipelines, infrastructure, and the craft of running it in the real world.",
+    href: "/dev/",
+  },
+  {
+    glyph: "⊕",
+    title: "The ciphers",
+    body: "Cryptography and the hard edges of systems built to be trusted.",
+    soon: true,
+  },
+];
+---
+
+<Base>
+  <!-- Hero: the thesis -->
+  <section class="hero-wash relative overflow-hidden">
+    <div
+      class="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-5 pb-20 pt-16 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-6 lg:pb-28 lg:pt-24"
+    >
+      <div class="max-w-xl">
+        <p class="eyebrow" data-reveal>
+          <span class="text-accent">&rsaquo;</span>&nbsp;&nbsp;matrix alchemy
+        </p>
+        <h1
+          class="mt-5 text-balance font-display text-[2.05rem] leading-[1.1] tracking-[-0.025em] sm:text-[3.4rem] sm:leading-[1.04]"
+          style="font-weight:600;--reveal-delay:70ms"
+          data-reveal
+        >
+          Notes on the models, the machines, and the <span class="text-accent"
+            >ciphers</span
+          ><span class="text-gold">.</span>
+        </h1>
+        <p
+          class="mt-6 max-w-md text-lg leading-relaxed text-fg-soft"
+          style="--reveal-delay:140ms"
+          data-reveal
+        >
+          RenoCrypt is a working notebook on machine learning and the systems
+          that run it. Cybersecurity is where it's heading next. Written in the
+          open, from first principles to production.
+        </p>
+        <div
+          class="mt-8 flex flex-wrap items-center gap-3"
+          style="--reveal-delay:210ms"
+          data-reveal
+        >
+          <a
+            href="/posts/"
+            class="cta-primary rounded-md bg-accent px-5 py-2.5 font-mono text-[0.8rem] uppercase tracking-[0.14em] text-bg"
+          >
+            Read the writing
+          </a>
+          <a
+            href="/topics/"
+            class="cta-ghost rounded-md border border-line px-5 py-2.5 font-mono text-[0.8rem] uppercase tracking-[0.14em] text-fg hover:border-accent hover:text-accent"
+          >
+            Browse topics
+          </a>
+        </div>
+      </div>
+
+      <div class="relative" style="--reveal-delay:280ms" data-reveal>
+        <div
+          class="pointer-events-none absolute inset-0 -z-0"
+          style="background: radial-gradient(circle at 55% 50%, var(--halo), transparent 68%);"
+        >
+        </div>
+        <HeroSigil
+          class="relative mx-auto w-full max-w-[440px] lg:max-w-[520px]"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- The three threads: a quiet triptych of what RenoCrypt is about -->
+  <section
+    class="mx-auto max-w-6xl px-5 sm:px-8"
+    aria-label="What RenoCrypt writes about"
+  >
+    <div class="rule"></div>
+    <div class="grid gap-px overflow-hidden bg-line sm:grid-cols-3" data-reveal>
+      {
+        threads.map((t) =>
+          t.href ? (
+            <a
+              href={t.href}
+              class="pillar group bg-bg px-1 py-12 sm:px-7 lg:py-14"
+            >
+              <div
+                class="pillar-glyph font-mono text-2xl text-gold"
+                aria-hidden="true"
+              >
+                {t.glyph}
+              </div>
+              <h2
+                class="pillar-title mt-5 font-display text-lg"
+                style="font-weight:600"
+              >
+                {t.title}
+              </h2>
+              <p class="mt-2.5 text-[0.95rem] leading-relaxed text-muted">
+                {t.body}
+              </p>
+            </a>
+          ) : (
+            <div class="bg-bg px-1 py-12 sm:px-7 lg:py-14">
+              <div class="pillar-glyph font-mono text-2xl text-gold" aria-hidden="true">
+                {t.glyph}
+              </div>
+              <div class="mt-5 flex items-baseline gap-2.5">
+                <h2 class="font-display text-lg" style="font-weight:600">
+                  {t.title}
+                </h2>
+                {t.soon && (
+                  <span class="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-muted">
+                    next
+                  </span>
+                )}
+              </div>
+              <p class="mt-2.5 text-[0.95rem] leading-relaxed text-muted">
+                {t.body}
+              </p>
+            </div>
+          )
+        )
+      }
+    </div>
+  </section>
+</Base>

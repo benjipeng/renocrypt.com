@@ -1,0 +1,72 @@
+# Build and deploy the Astro site to GitHub Pages.
+name: Deploy Astro site to Pages
+
+on:
+  # Deploy on every push to the default branch.
+  push:
+    branches: ["main"]
+  # Allow manual runs from the Actions tab.
+  workflow_dispatch:
+
+# Least-privilege token, plus the OIDC + pages scopes the deploy needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; never cancel an in-flight production deploy.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Persist Astro's optimized-image cache (node_modules/.astro) so sharp
+      # does not re-encode every image on each run. Rolling key: restore the
+      # most recent cache, then save a fresh one.
+      - name: Cache Astro image optimization
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.astro
+          key: astro-assets-${{ github.run_id }}
+          restore-keys: |
+            astro-assets-
+
+      - name: Build with Astro
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

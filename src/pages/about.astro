@@ -1,0 +1,46 @@
+---
+import Base from "../layouts/Base.astro";
+import Aurora from "../components/art/Aurora.astro";
+---
+
+<Base
+  title="About · RenoCrypt"
+  description="About RenoCrypt, the Matrix Alchemy notebook for machine learning, AI, and engineering."
+>
+  <section class="mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:py-16">
+    <div class="grid items-center gap-8 lg:grid-cols-[1fr_0.8fr] lg:gap-12">
+      <div class="max-w-3xl">
+        <p class="eyebrow">&rsaquo;&nbsp;&nbsp;about</p>
+        <h1 class="mt-5 font-display text-[2.2rem] leading-tight sm:text-5xl">
+          RenoCrypt is Matrix Alchemy.
+        </h1>
+      </div>
+      <div class="mx-auto w-full max-w-[360px]">
+        <Aurora />
+      </div>
+    </div>
+    <div class="max-w-3xl">
+      <div class="article-body mt-10">
+        <p>
+          RenoCrypt is a working notebook on machine learning, AI, and
+          engineering: the math underneath models, the systems that make them
+          useful, and the craft of turning experiments into shipped tools.
+        </p>
+        <p>
+          Written by Benji, whose background in physical chemistry and data
+          science shapes the notebook's bias toward first principles,
+          mathematical structure, and practical implementation.
+        </p>
+        <p>
+          It favors clean typography and fast pages, with math and code treated
+          as first-class, so the long-form notes stay readable and exact.
+        </p>
+      </div>
+
+      <div class="mt-8 flex flex-wrap gap-2">
+        <a class="reno-chip" href="https://github.com/benjipeng">GitHub</a>
+        <a class="reno-chip" href="/rss.xml">RSS</a>
+      </div>
+    </div>
+  </section>
+</Base>

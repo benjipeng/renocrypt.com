@@ -1,0 +1,217 @@
+---
+/**
+ * Hero sigil: an alchemical instrument that visualizes "Matrix Alchemy".
+ * Concentric rings of glyphs and matrix brackets orbit a pulsing core that
+ * distills to a single gold node. Colors are theme variables, so the sigil
+ * adapts to day and night. Motion is CSS-driven and yields to reduced-motion
+ * via the global reset in global.css.
+ */
+interface Props {
+  class?: string;
+}
+const { class: cls = "" } = Astro.props;
+
+// Glyph ring: metals and operators, the two languages of the brief.
+const glyphs = [
+  { t: "Au", x: 480, y: 280, fill: "var(--gold)" },
+  { t: "Ag", x: 421, y: 421, fill: "var(--muted)" },
+  { t: "Ξ", x: 280, y: 480, fill: "var(--accent)" },
+  { t: "∇", x: 139, y: 421, fill: "var(--muted)" },
+  { t: "λ", x: 80, y: 280, fill: "var(--muted)" },
+  { t: "Σ", x: 139, y: 139, fill: "var(--accent)" },
+  { t: "π", x: 280, y: 80, fill: "var(--muted)" },
+  { t: "∂", x: 421, y: 139, fill: "var(--muted)" },
+];
+---
+
+<svg
+  viewBox="0 0 560 560"
+  class={`hero-sigil ${cls}`}
+  role="img"
+  aria-label="An alchemical instrument distilling a matrix into a single gold node"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="var(--accent)" style="stop-opacity: var(--glow-accent)"></stop>
+      <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"></stop>
+    </radialGradient>
+    <radialGradient id="goldGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="var(--gold)" style="stop-opacity: var(--glow-gold)"></stop>
+      <stop offset="100%" stop-color="var(--gold)" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+
+  <!-- flanking matrix brackets: the instrument is a bracketed matrix -->
+  <path
+    d="M40 198 H26 V362 H40"
+    stroke="var(--line-strong)"
+    stroke-width="2"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.5"></path>
+  <path
+    d="M520 198 H534 V362 H520"
+    stroke="var(--line-strong)"
+    stroke-width="2"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.5"></path>
+
+  <!-- outer ring with ticks -->
+  <g class="orb spin-slow">
+    <circle
+      cx="280"
+      cy="280"
+      r="232"
+      fill="none"
+      stroke="var(--line-strong)"
+      stroke-width="1.4"
+      stroke-dasharray="2 22"></circle>
+    <circle cx="280" cy="48" r="3.4" fill="var(--accent)" class="twinkle"></circle>
+  </g>
+
+  <!-- glyph ring -->
+  <g class="orb glyphs">
+    {
+      glyphs.map((g) => (
+        <text
+          x={g.x}
+          y={g.y}
+          fill={g.fill}
+          font-family="var(--font-mono)"
+          font-size="21"
+          text-anchor="middle"
+          dominant-baseline="central"
+          opacity="0.9"
+        >
+          {g.t}
+        </text>
+      ))
+    }
+  </g>
+
+  <!-- mid dashed ring -->
+  <g class="orb spin-mid">
+    <circle
+      cx="280"
+      cy="280"
+      r="160"
+      fill="none"
+      stroke="var(--accent)"
+      stroke-width="1.4"
+      stroke-dasharray="11 17"
+      opacity="0.55"></circle>
+    <circle cx="440" cy="280" r="3" fill="var(--gold)" class="twinkle"></circle>
+  </g>
+
+  <!-- inner bracket arcs framing the core -->
+  <g class="orb spin-in">
+    <path
+      d="M192 200 A112 112 0 0 0 192 360"
+      fill="none"
+      stroke="var(--accent)"
+      stroke-width="2"
+      stroke-linecap="round"
+      opacity="0.7"></path>
+    <path
+      d="M368 200 A112 112 0 0 1 368 360"
+      fill="none"
+      stroke="var(--accent)"
+      stroke-width="2"
+      stroke-linecap="round"
+      opacity="0.7"></path>
+  </g>
+
+  <!-- core: pulsing halo, ring, and the gold transmutation node -->
+  <circle cx="280" cy="280" r="58" fill="url(#coreGlow)" class="anchor core-halo"
+  ></circle>
+  <circle
+    cx="280"
+    cy="280"
+    r="36"
+    fill="none"
+    stroke="var(--accent)"
+    stroke-width="1.5"
+    opacity="0.6"></circle>
+  <line
+    x1="280"
+    y1="280"
+    x2="280"
+    y2="232"
+    stroke="var(--accent)"
+    stroke-width="2"
+    stroke-linecap="round"
+    class="spark"></line>
+  <circle cx="280" cy="280" r="22" fill="url(#goldGlow)" class="anchor gold-halo"
+  ></circle>
+  <circle cx="280" cy="280" r="11" fill="var(--gold)"></circle>
+</svg>
+
+<style>
+  .orb,
+  .anchor {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .spin-slow {
+    animation: spin 64s linear infinite;
+  }
+  .glyphs {
+    animation: spin 96s linear infinite reverse;
+  }
+  .spin-mid {
+    animation: spin 46s linear infinite reverse;
+  }
+  .spin-in {
+    animation: spin 34s linear infinite;
+  }
+  .core-halo {
+    animation: breathe 6.5s ease-in-out infinite;
+  }
+  .gold-halo {
+    animation: breathe 4.5s ease-in-out infinite;
+  }
+  .spark {
+    animation: rise 5s ease-in-out infinite;
+  }
+  .twinkle {
+    animation: tw 5.6s ease-in-out infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes breathe {
+    0%,
+    100% {
+      opacity: 0.5;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.95;
+      transform: scale(1.07);
+    }
+  }
+  @keyframes rise {
+    0%,
+    100% {
+      opacity: 0.15;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+  @keyframes tw {
+    0%,
+    100% {
+      opacity: 0.55;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+</style>

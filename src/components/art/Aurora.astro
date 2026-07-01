@@ -1,0 +1,243 @@
+---
+/**
+ * About art: an aurora of alchemical light. Four ribbons at different bands,
+ * each a soft blurred aura PLUS a thin crisp core riding the same path (the
+ * "glow-core" technique: a bright thread inside the haze reads as light,
+ * not colored fog). Faint bracket ticks nod to the Matrix half of the
+ * brand. Seeded embers drift and twinkle independently. Theme tokens,
+ * day/night aware.
+ */
+function rng(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = rng(7);
+const W = 440;
+const H = 360;
+
+const sparks = Array.from({ length: 7 }, (_, i) => {
+  const gold = i % 2 === 0;
+  return {
+    x: (40 + rand() * (W - 80)).toFixed(1),
+    y: (56 + rand() * (H - 112)).toFixed(1),
+    r: (1.2 + rand() * 1.5).toFixed(2),
+    color: gold ? "var(--gold)" : "var(--accent)",
+    dx: (rand() * 30 - 15).toFixed(1),
+    dy: (-11 - rand() * 16).toFixed(1),
+    driftDur: (13 + rand() * 11).toFixed(1),
+    twinkleDur: (3.2 + rand() * 2.6).toFixed(1),
+    delay: (i * 0.55).toFixed(2),
+  };
+});
+---
+
+<svg
+  viewBox={`0 0 ${W} ${H}`}
+  class="art-svg"
+  role="img"
+  aria-label="Drifting ribbons of alchemical light with faint embers"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <filter id="auBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6"></feGaussianBlur>
+    </filter>
+    <!-- soft aura: horizontal fade so ribbon ends dissolve instead of cropping -->
+    <linearGradient id="auEm" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--accent)" stop-opacity="0"></stop>
+      <stop offset="0.26" stop-color="var(--accent)" stop-opacity="0.5"></stop>
+      <stop offset="0.74" stop-color="var(--accent)" stop-opacity="0.5"></stop>
+      <stop offset="1" stop-color="var(--accent)" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="auAu" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--gold)" stop-opacity="0"></stop>
+      <stop offset="0.3" stop-color="var(--gold)" stop-opacity="0.55"></stop>
+      <stop offset="0.7" stop-color="var(--gold)" stop-opacity="0.55"></stop>
+      <stop offset="1" stop-color="var(--gold)" stop-opacity="0"></stop>
+    </linearGradient>
+    <!-- crisp core: brighter, unblurred, riding the same centerline -->
+    <linearGradient id="auEmCore" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--accent)" stop-opacity="0"></stop>
+      <stop offset="0.3" stop-color="var(--accent)" style="stop-opacity: var(--glow-accent)"></stop>
+      <stop offset="0.7" stop-color="var(--accent)" style="stop-opacity: var(--glow-accent)"></stop>
+      <stop offset="1" stop-color="var(--accent)" stop-opacity="0"></stop>
+    </linearGradient>
+    <linearGradient id="auAuCore" x1="0" y1="0" x2={W} y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="var(--gold)" stop-opacity="0"></stop>
+      <stop offset="0.34" stop-color="var(--gold)" style="stop-opacity: var(--glow-gold)"></stop>
+      <stop offset="0.66" stop-color="var(--gold)" style="stop-opacity: var(--glow-gold)"></stop>
+      <stop offset="1" stop-color="var(--gold)" stop-opacity="0"></stop>
+    </linearGradient>
+    <radialGradient id="auFadeGrad" cx="50%" cy="48%" r="64%">
+      <stop offset="0%" stop-color="#fff"></stop>
+      <stop offset="58%" stop-color="#fff"></stop>
+      <stop offset="100%" stop-color="#000"></stop>
+    </radialGradient>
+    <mask id="auFade">
+      <rect x="0" y="0" width={W} height={H} fill="url(#auFadeGrad)"></rect>
+    </mask>
+  </defs>
+
+  <!-- faint bracket ticks: a quiet echo of the hero sigil's matrix frame -->
+  <path
+    d="M20 132 H9 V228 H20"
+    stroke="var(--line-strong)"
+    stroke-width="1.4"
+    fill="none"
+    stroke-linecap="round"
+    opacity="0.32"></path>
+  <path
+    d="M420 132 H431 V228 H420"
+    stroke="var(--line-strong)"
+    stroke-width="1.4"
+    fill="none"
+    stroke-linecap="round"
+    opacity="0.32"></path>
+
+  <g mask="url(#auFade)" filter="url(#auBlur)">
+    <path
+      class="au-ribbon au-a"
+      d="M0 92 C 140 34, 250 158, 440 86"
+      fill="none"
+      stroke="url(#auEm)"
+      stroke-width="26"
+      stroke-linecap="round"></path>
+    <path
+      class="au-ribbon au-b"
+      d="M0 176 C 90 120, 150 220, 230 176 S 350 120, 440 190"
+      fill="none"
+      stroke="url(#auAu)"
+      stroke-width="18"
+      stroke-linecap="round"></path>
+    <path
+      class="au-ribbon au-c"
+      d="M0 260 C 110 210, 200 300, 300 255 C 350 232, 400 250, 440 240"
+      fill="none"
+      stroke="url(#auEm)"
+      stroke-width="30"
+      stroke-linecap="round"
+      opacity="0.85"></path>
+    <path
+      class="au-ribbon au-d"
+      d="M0 320 C 140 278, 260 342, 440 300"
+      fill="none"
+      stroke="url(#auAu)"
+      stroke-width="16"
+      stroke-linecap="round"
+      opacity="0.8"></path>
+  </g>
+
+  <g mask="url(#auFade)">
+    <path
+      class="au-core au-a"
+      d="M0 92 C 140 34, 250 158, 440 86"
+      fill="none"
+      stroke="url(#auEmCore)"
+      stroke-width="2.4"
+      stroke-linecap="round"></path>
+    <path
+      class="au-core au-b"
+      d="M0 176 C 90 120, 150 220, 230 176 S 350 120, 440 190"
+      fill="none"
+      stroke="url(#auAuCore)"
+      stroke-width="1.8"
+      stroke-linecap="round"></path>
+    <path
+      class="au-core au-c"
+      d="M0 260 C 110 210, 200 300, 300 255 C 350 232, 400 250, 440 240"
+      fill="none"
+      stroke="url(#auEmCore)"
+      stroke-width="2.2"
+      stroke-linecap="round"></path>
+    <path
+      class="au-core au-d"
+      d="M0 320 C 140 278, 260 342, 440 300"
+      fill="none"
+      stroke="url(#auAuCore)"
+      stroke-width="1.6"
+      stroke-linecap="round"></path>
+  </g>
+
+  <g class="au-sparks" mask="url(#auFade)">
+    {
+      sparks.map((s) => (
+        <circle
+          class="au-spark"
+          cx={s.x}
+          cy={s.y}
+          r={s.r}
+          fill={s.color}
+          style={`--dx:${s.dx}px;--dy:${s.dy}px;animation-duration:${s.driftDur}s,${s.twinkleDur}s;animation-delay:${s.delay}s,${s.delay}s;filter:drop-shadow(0 0 3px ${s.color});`}
+        />
+      ))
+    }
+  </g>
+</svg>
+
+<style>
+  .au-ribbon,
+  .au-core {
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  /* the curve itself breathes (d is an animatable CSS property when both
+     keyframes share the same command structure) rather than the shape
+     just sliding around as a rigid body */
+  .au-a {
+    animation-name: auMorphA;
+    animation-duration: 14s;
+  }
+  .au-b {
+    animation-name: auMorphB;
+    animation-duration: 18s;
+    animation-delay: -5s;
+  }
+  .au-c {
+    animation-name: auMorphC;
+    animation-duration: 22s;
+    animation-delay: -9s;
+  }
+  .au-d {
+    animation-name: auMorphD;
+    animation-duration: 16s;
+    animation-delay: -3s;
+  }
+  .au-spark {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: auSparkDrift, auSpark;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  @keyframes auMorphA {
+    0%, 100% { d: path("M0 92 C 140 34, 250 158, 440 86"); }
+    50% { d: path("M0 108 C 152 66, 228 188, 440 74"); }
+  }
+  @keyframes auMorphB {
+    0%, 100% { d: path("M0 176 C 90 120, 150 220, 230 176 S 350 120, 440 190"); }
+    50% { d: path("M0 164 C 104 144, 138 240, 230 184 S 336 96, 440 204"); }
+  }
+  @keyframes auMorphC {
+    0%, 100% { d: path("M0 260 C 110 210, 200 300, 300 255 C 350 232, 400 250, 440 240"); }
+    50% { d: path("M0 246 C 124 190, 208 314, 300 247 C 364 216, 408 264, 440 254"); }
+  }
+  @keyframes auMorphD {
+    0%, 100% { d: path("M0 320 C 140 278, 260 342, 440 300"); }
+    50% { d: path("M0 306 C 154 256, 248 360, 440 290"); }
+  }
+  @keyframes auSparkDrift {
+    0% { transform: translate(0, 0); }
+    30% { transform: translate(calc(var(--dx) * 0.55), calc(var(--dy) * 0.2)); }
+    65% { transform: translate(calc(var(--dx) * 0.15), var(--dy)); }
+    100% { transform: translate(0, 0); }
+  }
+  @keyframes auSpark {
+    0%, 100% { opacity: 0.18; }
+    50% { opacity: 0.88; }
+  }
+</style>

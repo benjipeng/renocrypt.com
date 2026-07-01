@@ -1,0 +1,75 @@
+---
+import Base from "../../layouts/Base.astro";
+import {
+  articleTopics,
+  getPublishedArticles,
+  topicSlug,
+} from "../../lib/content";
+import Constellation from "../../components/art/Constellation.astro";
+
+const articles = await getPublishedArticles();
+const counts = new Map<string, { name: string; count: number }>();
+
+for (const entry of articles) {
+  for (const topic of articleTopics(entry)) {
+    const slug = topicSlug(topic);
+    if (!slug) continue;
+    const current = counts.get(slug) || { name: topic, count: 0 };
+    current.count += 1;
+    counts.set(slug, current);
+  }
+}
+
+// Sort by prominence: most-written topics first, then alphabetical.
+const topics = [...counts.entries()]
+  .map(([slug, value]) => ({ slug, ...value }))
+  .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+// Three quiet size tiers, so frequency reads as hierarchy, not noise.
+const tier = (count: number) =>
+  count >= 4
+    ? "text-[2rem] text-fg sm:text-[2.7rem]"
+    : count >= 2
+      ? "text-2xl text-fg sm:text-[1.7rem]"
+      : "text-lg text-muted";
+---
+
+<Base
+  title="Topics · RenoCrypt"
+  description="The recurring threads across RenoCrypt writing on ML, AI, and engineering."
+>
+  <section class="mx-auto max-w-5xl px-5 py-12 sm:px-8 lg:py-16">
+    <div class="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+      <header class="max-w-3xl">
+        <p class="eyebrow">&rsaquo;&nbsp;&nbsp;index</p>
+        <h1 class="mt-5 font-display text-[2.2rem] leading-tight sm:text-5xl">
+          Topics
+        </h1>
+        <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+          The threads the writing keeps returning to. Bigger topics appear more
+          often.
+        </p>
+      </header>
+      <div class="mx-auto w-full max-w-[380px]">
+        <Constellation />
+      </div>
+    </div>
+
+    <nav class="mt-12 flex flex-wrap items-baseline gap-x-7 gap-y-4">
+      {
+        topics.map((topic) => (
+          <a
+            href={`/topics/${topic.slug}/`}
+            class={`group font-display leading-none tracking-[-0.02em] transition-colors hover:text-accent ${tier(topic.count)}`}
+            style="font-weight:500"
+          >
+            {topic.name.replace(/-/g, " ")}
+            <sup class="ml-0.5 align-super font-mono text-[0.55em] font-normal text-muted transition-colors group-hover:text-accent">
+              {topic.count}
+            </sup>
+          </a>
+        ))
+      }
+    </nav>
+  </section>
+</Base>

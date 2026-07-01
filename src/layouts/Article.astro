@@ -1,0 +1,184 @@
+---
+import { Image } from "astro:assets";
+import Base from "./Base.astro";
+import {
+  articleDescription,
+  articleTopics,
+  formatDate,
+  readingTime,
+  sectionMeta,
+  topicSlug,
+  type ArticleEntry,
+} from "../lib/content";
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
+interface Props {
+  entry: ArticleEntry;
+  headings?: Heading[];
+}
+
+const { entry, headings = [] } = Astro.props;
+const meta = sectionMeta[entry.collection];
+const topics = articleTopics(entry);
+const hasHero = entry.data.showHero !== false && Boolean(entry.data.cover);
+const showInlineCover = !hasHero && Boolean(entry.data.cover);
+const showToc =
+  entry.data.showTableOfContents !== false &&
+  headings.some((heading) => heading.depth > 1 && heading.depth < 4);
+
+// SEO / GEO: article-specific Open Graph and BlogPosting structured data.
+const coverSrc = entry.data.cover?.src;
+const ogImage = coverSrc ? new URL(coverSrc, Astro.site).href : undefined;
+const published = entry.data.date.toISOString();
+const modified = (entry.data.updated ?? entry.data.date).toISOString();
+const articleUrl = new URL(Astro.url.pathname, Astro.site).href;
+const blogPosting = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: entry.data.title,
+  description: articleDescription(entry),
+  datePublished: published,
+  dateModified: modified,
+  author: { "@type": "Person", name: "Benji" },
+  publisher: { "@type": "Organization", name: "RenoCrypt" },
+  mainEntityOfPage: articleUrl,
+  ...(ogImage ? { image: ogImage } : {}),
+  ...(topics.length ? { keywords: topics.join(", ") } : {}),
+};
+---
+
+<Base
+  title={`${entry.data.title} · RenoCrypt`}
+  description={articleDescription(entry)}
+  image={ogImage}
+  type="article"
+  publishedTime={published}
+  modifiedTime={modified}
+  jsonLd={blogPosting}
+>
+  <article>
+    {
+      hasHero ? (
+        <header class="article-hero">
+          <Image
+            src={entry.data.cover}
+            alt=""
+            class="article-hero-image"
+            loading="eager"
+          />
+          <div class="article-hero-content mx-auto w-full max-w-6xl px-5 sm:px-8">
+            <p class="eyebrow">&rsaquo;&nbsp;&nbsp;{meta.eyebrow}</p>
+            <h1 class="article-hero-title mt-5 text-balance font-display text-[2.1rem] leading-[1.08] sm:text-[3.15rem]">
+              {entry.data.title}
+            </h1>
+            {entry.data.description && (
+              <p class="article-hero-description mt-5 max-w-2xl text-lg leading-relaxed">
+                {entry.data.description}
+              </p>
+            )}
+            <div class="article-hero-meta mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[0.74rem] uppercase tracking-[0.14em]">
+              <a href={meta.href} class="transition-colors hover:text-accent">
+                {meta.label}
+              </a>
+              <span>{formatDate(entry.data.date)}</span>
+              <span>{readingTime(entry)} min read</span>
+            </div>
+            {topics.length > 0 && (
+              <div class="mt-5 flex flex-wrap gap-2">
+                {topics.map((topic) => (
+                  <a class="reno-chip" href={`/topics/${topicSlug(topic)}/`}>
+                    {topic}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </header>
+      ) : (
+        <header class="mx-auto max-w-6xl px-5 pt-12 sm:px-8 lg:pt-16">
+          <div class="max-w-3xl">
+            <p class="eyebrow">&rsaquo;&nbsp;&nbsp;{meta.eyebrow}</p>
+            <h1 class="mt-5 text-balance font-display text-[2.1rem] leading-[1.08] sm:text-[3.15rem]">
+              {entry.data.title}
+            </h1>
+            {entry.data.description && (
+              <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+                {entry.data.description}
+              </p>
+            )}
+            <div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[0.74rem] uppercase tracking-[0.14em] text-muted">
+              <a href={meta.href} class="transition-colors hover:text-accent">
+                {meta.label}
+              </a>
+              <span>{formatDate(entry.data.date)}</span>
+              <span>{readingTime(entry)} min read</span>
+            </div>
+            {topics.length > 0 && (
+              <div class="mt-5 flex flex-wrap gap-2">
+                {topics.map((topic) => (
+                  <a class="reno-chip" href={`/topics/${topicSlug(topic)}/`}>
+                    {topic}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        </header>
+      )
+    }
+
+    {
+      showInlineCover && (
+        <div class="mx-auto mt-10 max-w-6xl overflow-hidden border-y border-line">
+          <Image
+            src={entry.data.cover}
+            alt={entry.data.coverAlt || ""}
+            class="mx-auto max-h-[520px] w-full object-cover"
+          />
+        </div>
+      )
+    }
+
+    <div class="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[minmax(0,1fr)_220px] lg:py-14">
+      <div class="article-body">
+        <slot />
+      </div>
+
+      {
+        showToc && (
+          <aside class="article-toc">
+            <p class="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted">
+              Contents
+            </p>
+            <nav class="mt-4 space-y-2">
+              {headings
+                .filter((heading) => heading.depth > 1 && heading.depth < 4)
+                .map((heading) => (
+                  <a
+                    href={`#${heading.slug}`}
+                    class={heading.depth === 3 ? "toc-sub" : undefined}
+                  >
+                    {heading.text}
+                  </a>
+                ))}
+            </nav>
+          </aside>
+        )
+      }
+    </div>
+
+    <footer class="mx-auto max-w-6xl border-t border-line px-5 pb-4 pt-8 sm:px-8">
+      <a
+        href={entry.collection === "dev" ? "/dev/" : "/posts/"}
+        class="inline-flex items-center gap-2 font-mono text-[0.78rem] uppercase tracking-[0.14em] text-muted transition-colors hover:text-accent"
+      >
+        <span aria-hidden="true">&larr;</span> Back to {meta.label}
+      </a>
+    </footer>
+  </article>
+</Base>

@@ -1,0 +1,209 @@
+---
+/**
+ * Topics art: a constellation web. Points sit on a jittered grid (not pure
+ * random) so coverage stays even instead of clustering. Rather than one
+ * rigid rotation for the whole network (which reads as static/mechanical),
+ * the graph is split into four quadrant clusters, each drifting with its
+ * own independent rotation/timing -- edges inside a cluster stay perfectly
+ * attached since the cluster (nodes + its internal edges) moves as one
+ * unit, while a handful of cross-cluster edges sit in a static connective
+ * layer underneath. Every node also gets its own tiny wander + breathe on
+ * top of its cluster's motion, so nothing feels like a single block.
+ * Seeded so the build is stable. Theme tokens, day/night aware.
+ */
+function rng(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = rng(11);
+const W = 440;
+const H = 380;
+const cols = 5;
+const rows = 4;
+const marginX = 34;
+const marginY = 30;
+const cellW = (W - 2 * marginX) / cols;
+const cellH = (H - 2 * marginY) / rows;
+const EDGE_DIST = 140;
+const CLUSTERS = [0, 1, 2, 3];
+
+type Pt = {
+  x: number;
+  y: number;
+  r: number;
+  gold: boolean;
+  d: string;
+  wx: string;
+  wy: string;
+  wd: string;
+  cluster: number;
+  delay: string;
+};
+const pts: Pt[] = [];
+for (let row = 0; row < rows; row++) {
+  for (let col = 0; col < cols; col++) {
+    const i = row * cols + col;
+    const cx = marginX + cellW * (col + 0.5);
+    const cy = marginY + cellH * (row + 0.5);
+    pts.push({
+      x: cx + (rand() - 0.5) * cellW * 0.72,
+      y: cy + (rand() - 0.5) * cellH * 0.72,
+      r: 1.8 + rand() * 3,
+      gold: i === 2 || i === 16,
+      d: (2.4 + rand() * 2.6).toFixed(2),
+      // tiny independent wander, kept small enough that a node never visibly
+      // detaches from the fixed-endpoint edge lines it's connected to
+      wx: ((rand() - 0.5) * 4.2).toFixed(1),
+      wy: ((rand() - 0.5) * 4.2).toFixed(1),
+      wd: (11 + rand() * 10).toFixed(1),
+      cluster: (row < 2 ? 0 : 2) + (col < 3 ? 0 : 1),
+      delay: (i * 0.21).toFixed(2),
+    });
+  }
+}
+
+type Edge = { x1: number; y1: number; x2: number; y2: number; op: string; sameCluster: boolean; cluster: number };
+const edges: Edge[] = [];
+for (let i = 0; i < pts.length; i++) {
+  for (let j = i + 1; j < pts.length; j++) {
+    const a = pts[i];
+    const b = pts[j];
+    const dist = Math.hypot(a.x - b.x, a.y - b.y);
+    if (dist < EDGE_DIST) {
+      const sameCluster = a.cluster === b.cluster;
+      edges.push({
+        x1: a.x,
+        y1: a.y,
+        x2: b.x,
+        y2: b.y,
+        op: (0.34 * (1 - dist / EDGE_DIST)).toFixed(3),
+        sameCluster,
+        cluster: sameCluster ? a.cluster : -1,
+      });
+    }
+  }
+}
+---
+
+<svg
+  viewBox={`0 0 ${W} ${H}`}
+  class="art-svg"
+  role="img"
+  aria-label="A drifting constellation of connected topics"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <filter id="cnGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="2.4"></feGaussianBlur>
+    </filter>
+  </defs>
+
+  <!-- cross-cluster edges: quiet connective tissue, held static -->
+  <g class="cn-static">
+    {
+      edges
+        .filter((e) => !e.sameCluster)
+        .map((e) => (
+          <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke="var(--accent)" stroke-width="1" opacity={e.op} />
+        ))
+    }
+  </g>
+
+  {
+    CLUSTERS.map((cid) => (
+      <g class={`cn-cluster cn-cluster-${cid}`}>
+        {edges
+          .filter((e) => e.cluster === cid)
+          .map((e) => (
+            <line x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2} stroke="var(--accent)" stroke-width="1" opacity={e.op} />
+          ))}
+        {pts
+          .filter((p) => p.cluster === cid)
+          .map((p) =>
+            p.gold ? (
+              <g
+                class="cn-node"
+                style={`--wx:${p.wx}px;--wy:${p.wy}px;animation-duration:${p.d}s,${p.d}s,${p.wd}s;animation-delay:${p.delay}s`}
+              >
+                <circle cx={p.x} cy={p.y} r={p.r + 5} fill="var(--gold)" opacity="0.4" filter="url(#cnGlow)" />
+                <circle cx={p.x} cy={p.y} r={p.r + 0.8} fill="var(--gold)" />
+              </g>
+            ) : (
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={p.r}
+                fill="var(--fg)"
+                class="cn-node"
+                style={`--wx:${p.wx}px;--wy:${p.wy}px;animation-duration:${p.d}s,${p.d}s,${p.wd}s;animation-delay:${p.delay}s`}
+              />
+            )
+          )}
+      </g>
+    ))
+  }
+</svg>
+
+<style>
+  .cn-static {
+    animation: cnStaticPulse 8s ease-in-out infinite;
+  }
+  .cn-cluster {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  .cn-cluster-0 { animation-name: cnClusterA; animation-duration: 24s; }
+  .cn-cluster-1 { animation-name: cnClusterB; animation-duration: 30s; animation-delay: -8s; }
+  .cn-cluster-2 { animation-name: cnClusterC; animation-duration: 27s; animation-delay: -14s; }
+  .cn-cluster-3 { animation-name: cnClusterD; animation-duration: 21s; animation-delay: -5s; }
+  .cn-node {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: cnTwinkle, cnBreathe, cnWander;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+  @keyframes cnStaticPulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+  }
+  @keyframes cnClusterA {
+    0%, 100% { transform: rotate(-3deg) translate(-4px, -3px); }
+    50% { transform: rotate(3deg) translate(4px, 3px); }
+  }
+  @keyframes cnClusterB {
+    0%, 100% { transform: rotate(2.5deg) translate(5px, -2px); }
+    50% { transform: rotate(-2.5deg) translate(-5px, 2px); }
+  }
+  @keyframes cnClusterC {
+    0%, 100% { transform: rotate(-3.5deg) translate(-3px, 4px); }
+    50% { transform: rotate(3.5deg) translate(3px, -4px); }
+  }
+  @keyframes cnClusterD {
+    0%, 100% { transform: rotate(2deg) translate(4px, 3px); }
+    50% { transform: rotate(-2deg) translate(-4px, -3px); }
+  }
+  @keyframes cnTwinkle {
+    0%, 100% { opacity: 0.42; }
+    50% { opacity: 1; }
+  }
+  /* scale/translate (not transform) so breathing and wandering compose
+     instead of one overwriting the other on the same element */
+  @keyframes cnBreathe {
+    0%, 100% { scale: 1; }
+    50% { scale: 1.4; }
+  }
+  @keyframes cnWander {
+    0% { translate: 0 0; }
+    30% { translate: calc(var(--wx) * 0.6) calc(var(--wy) * 0.25); }
+    65% { translate: calc(var(--wx) * 0.2) var(--wy); }
+    100% { translate: 0 0; }
+  }
+</style>

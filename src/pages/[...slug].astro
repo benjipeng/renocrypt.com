@@ -1,0 +1,24 @@
+---
+import { getCollection, render } from "astro:content";
+import Article from "../layouts/Article.astro";
+import { articlePath, byDateDesc, type ArticleEntry } from "../lib/content";
+
+export async function getStaticPaths() {
+  const [posts, dev] = await Promise.all([
+    getCollection("posts", ({ data }) => !data.draft),
+    getCollection("dev", ({ data }) => !data.draft),
+  ]);
+
+  return [...posts, ...dev].sort(byDateDesc).map((entry) => ({
+    params: { slug: articlePath(entry).replace(/^\/+|\/+$/g, "") },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props as { entry: ArticleEntry };
+const { Content, headings } = await render(entry);
+---
+
+<Article entry={entry} headings={headings}>
+  <Content />
+</Article>
