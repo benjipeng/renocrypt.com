@@ -4,12 +4,13 @@ import Article from "../layouts/Article.astro";
 import { articlePath, byDateDesc, type ArticleEntry } from "../lib/content";
 
 export async function getStaticPaths() {
-  const [posts, dev] = await Promise.all([
+  const [posts, dev, ciphers] = await Promise.all([
     getCollection("posts", ({ data }) => !data.draft),
     getCollection("dev", ({ data }) => !data.draft),
+    getCollection("ciphers", ({ data }) => !data.draft),
   ]);
 
-  return [...posts, ...dev].sort(byDateDesc).map((entry) => ({
+  return [...posts, ...dev, ...ciphers].sort(byDateDesc).map((entry) => ({
     params: { slug: articlePath(entry).replace(/^\/+|\/+$/g, "") },
     props: { entry },
   }));

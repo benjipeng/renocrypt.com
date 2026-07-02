@@ -1,0 +1,70 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import {
+  articleDescription,
+  articlePath,
+  articleTopics,
+  byDateDesc,
+  formatDate,
+  readingTime,
+  sectionMeta,
+} from "../../lib/content";
+import Avalanche from "../../components/art/Avalanche.astro";
+
+const articles = (
+  await getCollection("ciphers", ({ data }) => !data.draft)
+).sort(byDateDesc);
+const meta = sectionMeta.ciphers;
+---
+
+<Base title="Ciphers · RenoCrypt" description={meta.description}>
+  <section class="mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:py-16">
+    <div class="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+      <header class="max-w-3xl">
+        <p class="eyebrow">&rsaquo;&nbsp;&nbsp;{meta.eyebrow}</p>
+        <h1 class="mt-5 font-display text-[2.2rem] leading-tight sm:text-5xl">
+          Ciphers
+        </h1>
+        <p class="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
+          {meta.description}
+        </p>
+      </header>
+      <div class="mx-auto w-full max-w-[380px]">
+        <Avalanche />
+      </div>
+    </div>
+
+    <div class="mt-10">
+      {
+        articles.map((entry) => (
+          <a class="article-card" href={articlePath(entry)}>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-muted">
+              <span>{formatDate(entry.data.date)}</span>
+              <span>{readingTime(entry)} min read</span>
+            </div>
+            <h2 class="mt-3 max-w-3xl font-display text-2xl">
+              {entry.data.title}
+            </h2>
+            <p class="mt-2 max-w-2xl leading-relaxed text-muted">
+              {articleDescription(entry)}
+            </p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              {articleTopics(entry).slice(0, 4).map((topic) => (
+                <span class="reno-chip">{topic}</span>
+              ))}
+            </div>
+          </a>
+        ))
+      }
+      {
+        articles.length === 0 && (
+          <p class="mt-4 font-mono text-sm tracking-[0.05em] text-muted">
+            <span class="text-accent">&rsaquo;</span>&nbsp;&nbsp;New notes land
+            here as they are written.
+          </p>
+        )
+      }
+    </div>
+  </section>
+</Base>

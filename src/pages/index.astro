@@ -2,10 +2,52 @@
 import Base from "../layouts/Base.astro";
 import HeroSigil from "../components/HeroSigil.astro";
 
-// The three threads. ML/AI is the substance today; security is the frontier
-// we're turning to next; engineering is the craft underneath both. Math is
+// Rotating hero headlines. Three complete thoughts in the site's voice —
+// what it is, why it exists, how it works — each plain enough to land on
+// first read. They share a length (~51 characters) so every variant wraps to
+// the same lines and the block never shifts. The first is canonical (SSR,
+// screen readers, no-JS, reduced-motion); the others surface one at a time
+// with a word-level stagger.
+// Voice: the authority claim. Every headline is a credibility statement,
+// every lede says what backs it up. The header carries the name; the copy
+// never repeats it.
+const heroLines = [
+  [
+    { w: "Technical" },
+    { w: "depth" },
+    { w: "you" },
+    { w: "can" },
+    { w: "build", accent: true },
+    { w: "on", dot: true },
+  ],
+  [
+    { w: "Every" },
+    { w: "claim" },
+    { w: "comes" },
+    { w: "with" },
+    { w: "the" },
+    { w: "math", accent: true, dot: true },
+  ],
+  [
+    { w: "One" },
+    { w: "source," },
+    { w: "the" },
+    { w: "entire" },
+    { w: "stack", accent: true, dot: true },
+  ],
+];
+
+// Each headline's companion lede rotates with it and continues its thought.
+// Kept to one measure so every variant wraps alike and the CTAs never move.
+const heroLedes = [
+  "Long-form writing on machine learning, systems, and security — precise enough to cite, practical enough to ship.",
+  "Derivations, benchmarks, and working code are part of every piece, so results can be verified, not just quoted.",
+  "Model internals, systems engineering, and security research as one body of work — consistent from the mathematics to the deployed system.",
+];
+
+// The three threads, all standing: models, machines, ciphers. Math is
 // implicit ("first principles"), explained where a piece needs it, not a
-// thread of its own. Live sections link; the coming one is a statement.
+// thread of its own.
 const threads = [
   {
     n: "01",
@@ -27,8 +69,9 @@ const threads = [
     n: "03",
     glyph: "⊕",
     title: "The ciphers",
-    body: "Cryptography and the hard edges of systems built to be trusted.",
-    soon: true,
+    body: "Security from both sides: how systems get broken, and how to build ones that hold.",
+    href: "/ciphers/",
+    cta: "Read Ciphers",
   },
 ];
 ---
@@ -44,22 +87,42 @@ const threads = [
           <span class="text-accent">&rsaquo;</span>&nbsp;&nbsp;matrix alchemy
         </p>
         <h1
-          class="mt-5 text-balance font-display text-[2.05rem] leading-[1.1] tracking-[-0.025em] sm:text-[3.4rem] sm:leading-[1.04]"
+          class="hero-rotator mt-5 font-display text-[2.05rem] leading-[1.1] tracking-[-0.025em] sm:text-[3.4rem] sm:leading-[1.04]"
           style="font-weight:600;--reveal-delay:70ms"
           data-reveal
+          data-hero-rotator
         >
-          Notes on the models, the machines, and the <span class="text-accent"
-            >ciphers</span
-          ><span class="text-gold">.</span>
+          {
+            heroLines.map((line, li) => (
+              <span
+                class={`hero-line${li === 0 ? " is-active" : ""}`}
+                aria-hidden={li === 0 ? undefined : "true"}
+                data-hero-line
+              >
+                {/* prettier-ignore */}
+                {line.map((t, wi) => (
+                  <Fragment><span class="hw" style={`--wi:${wi}`}><span class={t.accent ? "text-accent" : t.gold ? "text-gold" : ""}>{t.w}</span>{t.dot && <span class="text-gold">.</span>}</span>{" "}</Fragment>
+                ))}
+              </span>
+            ))
+          }
         </h1>
         <p
-          class="mt-6 max-w-md text-lg leading-relaxed text-fg-soft"
+          class="hero-ledes mt-6 max-w-md text-lg leading-relaxed text-fg-soft"
           style="--reveal-delay:140ms"
           data-reveal
         >
-          RenoCrypt is a working notebook on machine learning and the systems
-          that run it. Cybersecurity is where it's heading next. Written in the
-          open, from first principles to production.
+          {
+            heroLedes.map((lede, li) => (
+              <span
+                class={`hero-lede${li === 0 ? " is-active" : ""}`}
+                aria-hidden={li === 0 ? undefined : "true"}
+                data-hero-lede
+              >
+                {lede}
+              </span>
+            ))
+          }
         </p>
         <div
           class="mt-8 flex flex-wrap items-center gap-3"
@@ -70,7 +133,7 @@ const threads = [
             href="/posts/"
             class="cta-primary rounded-md bg-accent px-5 py-2.5 font-mono text-[0.8rem] uppercase tracking-[0.14em] text-bg"
           >
-            Read the writing
+            Explore the work
           </a>
           <a
             href="/topics/"
@@ -102,67 +165,40 @@ const threads = [
     <div class="rule"></div>
     <div class="grid gap-px overflow-hidden bg-line sm:grid-cols-3" data-reveal>
       {
-        threads.map((t) =>
-          t.href ? (
-            <a
-              href={t.href}
-              class="pillar group relative flex flex-col bg-bg px-6 py-12 sm:px-7 lg:px-8 lg:py-16"
-            >
-              <span class="pillar-accent" aria-hidden="true" />
-              <div class="flex items-start justify-between">
-                <span
-                  class="pillar-glyph font-mono text-2xl text-gold"
-                  aria-hidden="true"
-                >
-                  {t.glyph}
-                </span>
-                <span class="pillar-index font-mono text-[0.7rem] tracking-[0.24em] text-muted">
-                  {t.n}
-                </span>
-              </div>
-              <h2
-                class="pillar-title mt-6 font-display text-lg"
-                style="font-weight:600"
+        threads.map((t) => (
+          <a
+            href={t.href}
+            class="pillar group relative flex flex-col bg-bg px-6 py-12 sm:px-7 lg:px-8 lg:py-16"
+          >
+            <span class="pillar-accent" aria-hidden="true"></span>
+            <div class="flex items-start justify-between">
+              <span
+                class="pillar-glyph font-mono text-2xl text-gold"
+                aria-hidden="true"
               >
-                {t.title}
-              </h2>
-              <p class="mt-2.5 text-[0.95rem] leading-relaxed text-muted">
-                {t.body}
-              </p>
-              <span class="pillar-cta mt-auto inline-flex items-center gap-1.5 pt-8 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-accent">
-                {t.cta}
-                <span class="pillar-arrow" aria-hidden="true">
-                  &rarr;
-                </span>
+                {t.glyph}
               </span>
-            </a>
-          ) : (
-            <div class="pillar is-soon relative flex flex-col bg-bg px-6 py-12 sm:px-7 lg:px-8 lg:py-16">
-              <span class="pillar-accent" aria-hidden="true" />
-              <div class="flex items-start justify-between">
-                <span
-                  class="pillar-glyph font-mono text-2xl text-gold"
-                  aria-hidden="true"
-                >
-                  {t.glyph}
-                </span>
-                <span class="pillar-index font-mono text-[0.7rem] tracking-[0.24em] text-muted">
-                  {t.n}
-                </span>
-              </div>
-              <h2 class="mt-6 font-display text-lg" style="font-weight:600">
-                {t.title}
-              </h2>
-              <p class="mt-2.5 text-[0.95rem] leading-relaxed text-muted">
-                {t.body}
-              </p>
-              <span class="mt-auto inline-flex items-center gap-2 pt-8 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted">
-                <span class="pillar-soon-dot" aria-hidden="true" />
-                On the bench
+              <span
+                class="pillar-index font-mono text-[0.7rem] tracking-[0.24em] text-muted"
+              >
+                {t.n}
               </span>
             </div>
-          )
-        )
+            <h2
+              class="pillar-title mt-6 font-display text-lg"
+              style="font-weight:600"
+            >
+              {t.title}
+            </h2>
+            <p class="mt-2.5 text-[0.95rem] leading-relaxed text-muted">
+              {t.body}
+            </p>
+            <span class="pillar-cta mt-auto inline-flex items-center gap-1.5 pt-8 font-mono text-[0.7rem] uppercase tracking-[0.16em] text-accent">
+              {t.cta}
+              <span class="pillar-arrow" aria-hidden="true">&rarr;</span>
+            </span>
+          </a>
+        ))
       }
     </div>
   </section>
@@ -177,4 +213,31 @@ const threads = [
       <span class="coda-node"></span>
     </div>
   </section>
+
+  <!-- Rotate the hero headline. Screen readers keep the canonical first line
+       (aria-hidden never changes); motion respects reduced-motion by simply
+       never starting; the tab being hidden pauses the cycle. -->
+  <script>
+    const rot = document.querySelector("[data-hero-rotator]");
+    const motionOK = window.matchMedia(
+      "(prefers-reduced-motion: no-preference)"
+    ).matches;
+    if (rot && motionOK) {
+      const lines = [...rot.querySelectorAll<HTMLElement>("[data-hero-line]")];
+      const ledes = [
+        ...document.querySelectorAll<HTMLElement>("[data-hero-lede]"),
+      ];
+      if (lines.length > 1) {
+        let i = 0;
+        setInterval(() => {
+          if (document.hidden) return;
+          lines[i].classList.remove("is-active");
+          ledes[i]?.classList.remove("is-active");
+          i = (i + 1) % lines.length;
+          lines[i].classList.add("is-active");
+          ledes[i]?.classList.add("is-active");
+        }, 7000);
+      }
+    }
+  </script>
 </Base>
