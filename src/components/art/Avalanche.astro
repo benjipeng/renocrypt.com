@@ -1,0 +1,172 @@
+---
+/**
+ * Ciphers art: the avalanche effect. A lattice of bits; once per cycle the
+ * gold source bit flips and a wave of state-change cascades outward in a
+ * diamond wavefront (Manhattan distance — propagation looks digital, not
+ * organic), rewriting the grid. A scattered few bits are hardened — ringed
+ * in gold, they hold while everything around them flips. Security research
+ * in one loop: how systems break, and how they're built to hold.
+ *
+ * Pure CSS animation on theme tokens; reduced-motion is handled globally.
+ */
+const COLS = 13;
+const ROWS = 11;
+const STEP = 32;
+const X0 = 28;
+const Y0 = 30;
+const SIZE = 9;
+const ORIGIN = { c: 4, r: 5 };
+const PERIOD = 5.8; // s, shared by every bit so the wave stays coherent
+const SPREAD = 3.1; // s from source to the farthest corner
+
+const maxDist = Math.max(
+  ORIGIN.c + ORIGIN.r,
+  ORIGIN.c + (ROWS - 1 - ORIGIN.r),
+  COLS - 1 - ORIGIN.c + ORIGIN.r,
+  COLS - 1 - ORIGIN.c + (ROWS - 1 - ORIGIN.r)
+);
+
+// Deterministic "hardened" scatter — no randomness, stable builds.
+const isHard = (c: number, r: number) => (c * 31 + r * 17) % 19 === 0;
+
+const bits: { x: number; y: number; d: string }[] = [];
+const hard: { x: number; y: number }[] = [];
+for (let c = 0; c < COLS; c++) {
+  for (let r = 0; r < ROWS; r++) {
+    const x = X0 + c * STEP;
+    const y = Y0 + r * STEP;
+    if (c === ORIGIN.c && r === ORIGIN.r) continue;
+    if (isHard(c, r)) {
+      hard.push({ x, y });
+      continue;
+    }
+    const dist = Math.abs(c - ORIGIN.c) + Math.abs(r - ORIGIN.r);
+    bits.push({ x, y, d: ((dist / maxDist) * SPREAD).toFixed(2) });
+  }
+}
+const ox = X0 + ORIGIN.c * STEP;
+const oy = Y0 + ORIGIN.r * STEP;
+---
+
+<svg
+  viewBox="0 0 440 380"
+  class="art-svg"
+  role="img"
+  aria-label="A lattice of bits: one gold bit flips and an avalanche of state-change ripples across the grid, while a few hardened bits hold"
+  xmlns="http://www.w3.org/2000/svg"
+>
+  <defs>
+    <filter id="avGlow" x="-120%" y="-120%" width="340%" height="340%">
+      <feGaussianBlur stdDeviation="3"></feGaussianBlur>
+    </filter>
+  </defs>
+
+  <!-- the state: bits flipping as the wavefront passes -->
+  {
+    bits.map((b) => (
+      <rect
+        x={b.x - SIZE / 2}
+        y={b.y - SIZE / 2}
+        width={SIZE}
+        height={SIZE}
+        rx="2"
+        fill="var(--trace)"
+        class="av-bit"
+        style={`--d:${b.d}s;animation-duration:${PERIOD}s`}
+      />
+    ))
+  }
+
+  <!-- the hardened few: ringed in gold, they hold -->
+  {
+    hard.map((h) => (
+      <g>
+        <rect
+          x={h.x - SIZE / 2}
+          y={h.y - SIZE / 2}
+          width={SIZE}
+          height={SIZE}
+          rx="2"
+          fill="var(--gold)"
+          opacity="0.55"
+        />
+        <rect
+          x={h.x - SIZE / 2 - 3.5}
+          y={h.y - SIZE / 2 - 3.5}
+          width={SIZE + 7}
+          height={SIZE + 7}
+          rx="4"
+          fill="none"
+          stroke="var(--gold)"
+          stroke-width="1"
+          opacity="0.45"
+        />
+      </g>
+    ))
+  }
+
+  <!-- the source: the one flipped bit everything cascades from -->
+  <g class="av-core" style={`animation-duration:${PERIOD}s`}>
+    <circle cx={ox} cy={oy} r="10" fill="var(--gold)" opacity="0.4" filter="url(#avGlow)"
+    ></circle>
+    <rect
+      x={ox - 5.5}
+      y={oy - 5.5}
+      width="11"
+      height="11"
+      rx="2.5"
+      fill="var(--gold)"></rect>
+  </g>
+</svg>
+
+<style>
+  .av-bit {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: avFlip;
+    animation-timing-function: ease-out;
+    animation-iteration-count: infinite;
+    animation-delay: var(--d);
+    opacity: 0.38;
+  }
+  .av-core {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: avKick;
+    animation-timing-function: ease-out;
+    animation-iteration-count: infinite;
+  }
+  @keyframes avFlip {
+    0%,
+    100% {
+      fill: var(--trace);
+      opacity: 0.38;
+      transform: scale(1);
+    }
+    4% {
+      fill: var(--accent);
+      opacity: 1;
+      transform: scale(1.4);
+    }
+    11% {
+      fill: var(--accent);
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    26% {
+      fill: var(--trace);
+      opacity: 0.38;
+    }
+  }
+  @keyframes avKick {
+    0% {
+      transform: scale(1.45);
+    }
+    12% {
+      transform: scale(1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+</style>

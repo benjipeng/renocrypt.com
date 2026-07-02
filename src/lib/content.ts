@@ -1,6 +1,9 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 
-export type ArticleEntry = CollectionEntry<"posts"> | CollectionEntry<"dev">;
+export type ArticleEntry =
+  | CollectionEntry<"posts">
+  | CollectionEntry<"dev">
+  | CollectionEntry<"ciphers">;
 export type ArticleSection = ArticleEntry["collection"];
 
 export const sectionMeta: Record<
@@ -20,6 +23,13 @@ export const sectionMeta: Record<
     href: "/dev/",
     description:
       "Engineering notes on systems, infrastructure, agents, and tools that ship.",
+  },
+  ciphers: {
+    label: "Ciphers",
+    eyebrow: "ciphers",
+    href: "/ciphers/",
+    description:
+      "Security research notes: how systems break, how they hold, and the cryptography underneath.",
   },
 };
 
@@ -81,11 +91,12 @@ export function articleTopics(entry: ArticleEntry) {
 }
 
 export async function getPublishedArticles() {
-  const [posts, dev] = await Promise.all([
+  const [posts, dev, ciphers] = await Promise.all([
     getCollection("posts", ({ data }) => !data.draft),
     getCollection("dev", ({ data }) => !data.draft),
+    getCollection("ciphers", ({ data }) => !data.draft),
   ]);
-  return [...posts, ...dev].sort(byDateDesc);
+  return [...posts, ...dev, ...ciphers].sort(byDateDesc);
 }
 
 export function topicSlug(topic: string) {

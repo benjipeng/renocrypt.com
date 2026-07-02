@@ -44,4 +44,9 @@ const dev = defineCollection({
   schema: articleSchema,
 });
 
-export const collections = { posts, dev };
+const ciphers = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/ciphers" }),
+  schema: articleSchema,
+});
+
+export const collections = { posts, dev, ciphers };
